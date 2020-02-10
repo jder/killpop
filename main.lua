@@ -38,7 +38,7 @@ function run_look()
     end
 
     local children = orisa.get_children(room)
-    local contents = "Present here: "
+    local contents = "Present here: \n  "
     for i, child in ipairs(children) do
       if i ~= 1 then
         contents = contents .. ", "
@@ -108,7 +108,7 @@ function handle_system_user(kind, sender, name, payload)
   elseif name == "disconnected" then
     orisa.send(orisa.get_parent(orisa.self), "say", "(goes to sleep)")
   else
-    print("unknown message", name)
+    main("system/object", sender, name, payload)
   end
 end
 
@@ -118,6 +118,10 @@ function handle_system_room(kind, sender, name, payload)
       orisa.send(object, "tell", {message = string.format("%s: %s", orisa.get_username(sender), payload)})
     end
   else
-    print("unknown message", name)
+    main("system/object", sender, name, payload)
   end
+end
+
+function handle_system_object(kind, sender, name, payload)
+  print("unknown message", name)
 end
