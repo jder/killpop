@@ -11,7 +11,7 @@ function main(kind, sender, name, payload)
 end
 
 function run_eval(cmd) 
-  local chunk, err = load("return (" .. cmd .. ")", "command", "t")
+  local chunk, err = load(cmd, "command", "t")
   if not chunk then
     orisa.send_user_tell("Compile Error: " .. err)
   else
@@ -56,14 +56,37 @@ function run_inspect(query)
     return
   end
 
+  local prefix = base.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
   local description = orisa.get_attr(target, "description")
   if description == nil then
-    orisa.send_user_tell(base.get_name(target) .. " is uninteresting.")
+    orisa.send_user_tell(prefix .. " is uninteresting.")
   else
-    orisa.send_user_tell(base.get_name(target) .. ": " .. description)
+    orisa.send_user_tell(prefix .. ": " .. description)
   end
 end
 
+edit_template = [[
+  require "main"
+  
+  function handle_$KIND(kind, sender, name, payload)
+    -- sample message handling; try it with /ping
+    if name == "ping" then
+      orisa.send(sender, "pong", payload)
+    else 
+      -- fallback to behavior of system/object, if you like
+      -- (includes handling for /set)
+      main("system/object", sender, name, payload)
+    end
+  end
+]]  
+
+function run_edit(kind)
+  local current = orisa.get_custom_space_content(kind)
+  if current == nil then
+    current = string.gsub(edit_template, "$KIND", string.gsub(kind, "/", "_"))
+  end
+  orisa.send_user_edit_file(kind, current)
+end
 
 function handle_system_user(kind, sender, name, payload)
   if name == "say" then
@@ -73,7 +96,8 @@ function handle_system_user(kind, sender, name, payload)
       ["^/look$"] = run_look,
       ["^/l$"] = run_look,
       ["^/inspect *(.*)"] = run_inspect,
-      ["^/x *(.*)"] = run_inspect
+      ["^/x *(.*)"] = run_inspect,
+      ["^/edit *(%g+)"] = run_edit
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
