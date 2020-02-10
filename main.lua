@@ -63,6 +63,17 @@ function run_inspect(query)
   else
     orisa.send_user_tell(prefix .. ": " .. description)
   end
+
+  local children = orisa.get_children(target)
+  local contents = "Holding: "
+  for i, child in ipairs(children) do
+    if i ~= 1 then
+      contents = contents .. ", "
+    end
+    contents = contents .. base.get_name(child) .. " (" .. child .. ")"
+  end
+  orisa.send_user_tell(contents)
+
 end
 
 edit_template = [[
@@ -119,6 +130,22 @@ function run_ping(query)
   orisa.send(target, "ping")
 end
 
+function run_move(query, dest_query)
+  local target = base.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  local dest = base.find(dest_query)
+  if dest == nil then 
+    orisa.send_user_tell("I don't see " .. dest_query)
+    return
+  end
+
+  orisa.send(target, "move", {destination = dest})
+end
+
 function handle_system_user(kind, sender, name, payload)
   if name == "say" then
     local patterns = {
@@ -131,7 +158,8 @@ function handle_system_user(kind, sender, name, payload)
       ["^/edit +(%g+)"] = run_edit,
       ["^/set +(%g+) +(%g+) +(.+)"] = run_set,
       ["^/get +(%g+) +(%g+)"] = run_get,
-      ["^/ping +(%g+)"] = run_ping
+      ["^/ping +(%g+)"] = run_ping,
+      ["^/move +(%g+) +(%g+)"] = run_move
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
@@ -183,14 +211,21 @@ function handle_system_room(kind, sender, name, payload)
 end
 
 function handle_system_object(kind, sender, name, payload)
+  local from_owner = (sender == orisa.self or sender == orisa.get_attr(orisa.self, "owner") or sender == "#1")
   if name == "set" then 
-    if sender == orisa.self or sender == orisa.get_attr(orisa.self, "owner") then
+    if from_owner then
       orisa.set_attr(orisa.self, payload.name, payload.value)
       orisa.send(sender, "tell", { message = payload.name .. " set" })
     else 
       print("ignoring unpermitted set")
     end
-  else 
+  elseif name == "move" then
+    if from_owner then
+      orisa.send_move_object(orisa.self, payload.destination)
+    else 
+      print("ignoring unpermitted set")
+    end
+  else
     print("unknown message", name)
   end
 end

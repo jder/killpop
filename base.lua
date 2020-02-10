@@ -5,6 +5,7 @@ function base.parse(text, patterns)
   for pat, handler in pairs(patterns) do
     local captures = {string.match(text, pat)}
     if captures[1] ~= nil then
+      orisa.send_user_tell(text)
       handler(table.unpack(captures))
       return true
     end
@@ -28,6 +29,10 @@ end
 
 function base.find(query, parent)
   if string.match(query, "#%d+") then return query end
+
+  if query == "me" then
+    return orisa.original_user
+  end
 
   if parent == nil then
     parent = orisa.get_parent(orisa.self)
