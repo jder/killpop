@@ -88,6 +88,37 @@ function run_edit(kind)
   orisa.send_user_edit_file(kind, current)
 end
 
+function run_set(query, attr, value)
+  local target = base.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  orisa.send(target, "set", {name = attr, value = value})
+end
+
+function run_get(query, attr)
+  local target = base.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  orisa.send_user_tell(base.get_name(target) .. "." .. attr .. " = " .. orisa.get_attr(target, attr))
+end
+
+function run_ping(query)
+  local target = base.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  orisa.send_user_tell("sending ping to " .. base.get_name(target))
+  orisa.send(target, "ping")
+end
+
 function handle_system_user(kind, sender, name, payload)
   if name == "say" then
     local patterns = {
@@ -97,7 +128,10 @@ function handle_system_user(kind, sender, name, payload)
       ["^/l$"] = run_look,
       ["^/inspect *(.*)"] = run_inspect,
       ["^/x *(.*)"] = run_inspect,
-      ["^/edit *(%g+)"] = run_edit
+      ["^/edit +(%g+)"] = run_edit,
+      ["^/set +(%g+) +(%g+) +(.+)"] = run_set,
+      ["^/get +(%g+) +(%g+)"] = run_get,
+      ["^/ping +(%g+)"] = run_ping
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
@@ -131,6 +165,8 @@ function handle_system_user(kind, sender, name, payload)
     orisa.send_save_custom_space_content(payload.name, payload.content)
   elseif name == "disconnected" then
     orisa.send(orisa.get_parent(orisa.self), "say", "(goes to sleep)")
+  elseif name == "pong" then
+    orisa.send_user_tell("got pong from " .. base.get_name(sender))
   else
     main("system/object", sender, name, payload)
   end
@@ -147,5 +183,14 @@ function handle_system_room(kind, sender, name, payload)
 end
 
 function handle_system_object(kind, sender, name, payload)
-  print("unknown message", name)
+  if name == "set" then 
+    if sender == orisa.self or sender == orisa.get_attr(orisa.self, "owner") then
+      orisa.set_attr(orisa.self, payload.name, payload.value)
+      orisa.send(sender, "tell", { message = payload.name .. " set" })
+    else 
+      print("ignoring unpermitted set")
+    end
+  else 
+    print("unknown message", name)
+  end
 end
