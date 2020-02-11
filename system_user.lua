@@ -1,5 +1,6 @@
 local system_user = {}
-base = require "base"
+
+local base = require "base"
 
 function handlers.system_user(kind, sender, name, payload)
   if name == "say" then

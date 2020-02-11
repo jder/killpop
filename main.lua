@@ -1,10 +1,10 @@
 -- global list of handlers which modules can register themselves in
 handlers = {}
 
-base = require "base"
-
 require "system_user"
 require "system_room"
+
+local base = require "base"
 
 function main(kind, sender, name, payload)
   local underscored = string.gsub(kind, "/", "_")
