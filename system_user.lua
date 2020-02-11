@@ -17,14 +17,16 @@ function handlers.system_user(kind, sender, name, payload)
       ["^/ping +(%g+)"] = system_user.run_ping,
       ["^/move +(%g+) +(%g+)"] = system_user.run_move,
       ["^/create +(%g+)"] = system_user.run_create,
-      -- ["^/dig +(%g+)"] = system_user.run_dig, -- creating the door+room and connecting them will still be a pain without replies or immediate-creates
+      ["^/dig +(%g+)"] = system_user.run_dig,
+      ["^/go +(%g+)"] = system_user.run_go
+      -- ["^/help"] = system_user.run_help,
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
       if unknown ~= nil then
         orisa.send_user_tell("Unknown command " .. unknown)
       else 
-        orisa.send(orisa.get_parent(orisa.self), "say", payload)
+        orisa.send(orisa.get_parent(orisa.self), "tell", {message = orisa.get_username(orisa.self) .. ": " .. payload})
       end
     end
   elseif name == "tell" then
@@ -45,7 +47,7 @@ function handlers.system_user(kind, sender, name, payload)
     if history then
       orisa.send_user_backlog(history)
     end
-    orisa.send_user_tell("Welcome Back! New features include lua errors appearing in console and backtick (`) meaning eval!")
+    orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
     orisa.send(orisa.get_parent(orisa.self), "say", "(wakes up)")
   elseif name == "save_file" then
     orisa.send_save_custom_space_content(payload.name, payload.content)
@@ -181,6 +183,41 @@ end
 
 function system_user.run_create(kind)
   orisa.send_create_object(orisa.self, kind, {owner = orisa.self})
+end
+
+function system_user.run_dig(direction, destination_query)
+  local parent = orisa.get_parent(orisa.self)
+  if parent == nil then
+    orisa.send_user_tell("You aren't anywhere.")
+    return
+  end
+  
+  local destination = nil
+  if destination_query ~= nil then
+    destination = base.find(destination_query)
+    if destination == nil then
+      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
+      return
+    end
+  end
+
+  orisa.send_create_object(parent, "system/door", {owner = orisa.self, direction = direction, destination = destination})
+end
+
+function system_user.run_go(direction)
+  door = base.find(direction)
+  if door == nil then
+    orisa.send_user_tell("I don't see " .. direction .. " here.")
+    return
+  end
+
+  destination = orisa.get_attr(door, "destination")
+  orisa.send_user_tell("You go " .. direction .. ".")
+  orisa.send_move_object(orisa.self, destination)
+  local parent = orisa.get_parent(orisa.self)
+  if parent then
+    orisa.send(parent, "tell_others", {message = string.format("%s goes %s.", orisa.get_username(orisa.self), direction)})
+  end
 end
 
 -- templates

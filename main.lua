@@ -1,8 +1,10 @@
 -- global list of handlers which modules can register themselves in
 handlers = {}
 
+require "system_object"
 require "system_user"
 require "system_room"
+require "system_door"
 
 local base = require "base"
 
