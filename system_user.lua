@@ -218,6 +218,7 @@ function system_user.run_go(direction)
   if parent then
     orisa.send(parent, "tell_others", {message = string.format("%s goes %s.", orisa.get_username(orisa.self), direction)})
   end
+  orisa.send(destination, "tell_others", {message = string.format("%s arrives.", orisa.get_username(orisa.self))})
 end
 
 -- templates

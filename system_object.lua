@@ -23,9 +23,11 @@ function handlers.system_object(kind, sender, name, payload)
     else 
       print("Ignoring duplicate created message")
     end
-  else
+  elseif not system_object.ignored_messages[name] then
     print("unknown message", name)
   end
 end
+
+system_object.ignored_messages = {tell = true, parent_changed = true, child_added = true}
 
 return system_object
