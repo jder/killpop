@@ -76,21 +76,6 @@ function run_inspect(query)
 
 end
 
-edit_template = [[
-  require "main"
-  
-  function handle_$KIND(kind, sender, name, payload)
-    -- sample message handling; try it with /ping
-    if name == "ping" then
-      orisa.send(sender, "pong", payload)
-    else 
-      -- fallback to behavior of system/object, if you like
-      -- (includes handling for /set)
-      main("system/object", sender, name, payload)
-    end
-  end
-]]  
-
 function run_edit(kind)
   local current = orisa.get_custom_space_content(kind)
   if current == nil then
@@ -243,3 +228,20 @@ function handle_system_object(kind, sender, name, payload)
     print("unknown message", name)
   end
 end
+
+-- templates
+
+edit_template = [[
+require "main"
+
+function handle_$KIND(kind, sender, name, payload)
+  -- sample message handling; try it with /ping
+  if name == "ping" then
+    orisa.send(sender, "pong", payload)
+  else 
+    -- fallback to behavior of system/object, if you like
+    -- (includes handling for /set)
+    main("system/object", sender, name, payload)
+  end
+end
+]]  
