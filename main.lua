@@ -65,7 +65,7 @@ function run_inspect(query)
   end
 
   local children = orisa.get_children(target)
-  local contents = "Holding: "
+  local contents = "Contents: "
   for i, child in ipairs(children) do
     if i ~= 1 then
       contents = contents .. ", "
@@ -146,6 +146,10 @@ function run_move(query, dest_query)
   orisa.send(target, "move", {destination = dest})
 end
 
+function run_create(kind)
+  orisa.send_create_object(orisa.self, kind, {owner = orisa.self})
+end
+
 function handle_system_user(kind, sender, name, payload)
   if name == "say" then
     local patterns = {
@@ -159,7 +163,9 @@ function handle_system_user(kind, sender, name, payload)
       ["^/set +(%g+) +(%g+) +(.+)"] = run_set,
       ["^/get +(%g+) +(%g+)"] = run_get,
       ["^/ping +(%g+)"] = run_ping,
-      ["^/move +(%g+) +(%g+)"] = run_move
+      ["^/move +(%g+) +(%g+)"] = run_move,
+      ["^/create +(%g+)"] = run_create,
+      -- ["^/dig +(%g+)"] = run_dig, -- creating the door+room and connecting them will still be a pain without replies or immediate-creates
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
@@ -224,6 +230,14 @@ function handle_system_object(kind, sender, name, payload)
       orisa.send_move_object(orisa.self, payload.destination)
     else 
       print("ignoring unpermitted set")
+    end
+  elseif name == "created" then
+    -- the this is sent once, right after we are created, by send_create_object; see calls to that for payload
+    if orisa.get_state(orisa.self, "created") == nil then
+      orisa.set_attr(orisa.self, "owner", payload.owner)
+      orisa.set_state(orisa.self, "created", true)
+    else 
+      print("Ignoring duplicate created message")
     end
   else
     print("unknown message", name)

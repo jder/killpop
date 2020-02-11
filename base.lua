@@ -38,13 +38,20 @@ function base.find(query, parent)
     parent = orisa.get_parent(orisa.self)
   end
 
-  if parent == nil then return nil end 
-  for _, child in ipairs(orisa.get_children(parent)) do
+  if parent ~= nil then 
+    for _, child in ipairs(orisa.get_children(parent)) do
+      if base.get_name(child) == query then
+        return child
+      end
+    end
+  end
+
+  for _, child in ipairs(orisa.get_children(orisa.self)) do
     if base.get_name(child) == query then
       return child
     end
   end
-
+  
   -- TODO: adjectives etc
 
   return nil
