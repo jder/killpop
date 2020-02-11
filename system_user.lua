@@ -48,11 +48,11 @@ function handlers.system_user(kind, sender, name, payload)
       orisa.send_user_backlog(history)
     end
     orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
-    orisa.send(orisa.get_parent(orisa.self), "say", "(wakes up)")
+    orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
   elseif name == "save_file" then
     orisa.send_save_custom_space_content(payload.name, payload.content)
   elseif name == "disconnected" then
-    orisa.send(orisa.get_parent(orisa.self), "say", "(goes to sleep)")
+    orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
   elseif name == "pong" then
     orisa.send_user_tell("got pong from " .. base.get_name(sender))
   else
