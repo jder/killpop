@@ -1,6 +1,7 @@
 local base = {}
 
--- patterns should be a map from lua patterns -> functions to call with the captures
+--- Matches patterns and calls functions with the captures
+-- TODO: some actual parsing so we don't reject extra args like `/l foo` as "unknown command /l"
 function base.parse(text, patterns)
   for pat, handler in pairs(patterns) do
     local captures = {string.match(text, pat)}
@@ -13,6 +14,14 @@ function base.parse(text, patterns)
   return false
 end
 
+--- Returns a pair of the kind's top-level package and the package name
+-- e.g. base.split_kind("system.object") == "system", "object".
+-- Returns nil if it does not match the expected pattern.
+function base.split_kind(kind)
+  return string.match(kind, "^([a-zA-Z0-9_]+)%.([a-zA-Z0-9_]+)$")
+end
+
+--- A quick description of this object
 function base.get_name(object)
   local username = orisa.get_username(object)
   if username ~= nil then 
@@ -51,7 +60,7 @@ function base.find(query, parent)
       return child
     end
   end
-  
+
   -- TODO: adjectives etc
 
   return nil

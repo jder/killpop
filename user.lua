@@ -129,7 +129,14 @@ end
 function user.run_edit(kind)
   local current = orisa.get_local_package_content(kind)
   if current == nil then
-    current = string.gsub(user.edit_template, "$KIND", string.gsub(kind, "/", "_"))
+    local top, package = base.split_kind(kind)
+    local fallback = "system.object"
+    if package == "user" then
+      fallback = "system.user"
+    end
+    current = user.edit_template
+    current = string.gsub(current, "$PACKAGE", package)
+    current = string.gsub(current, "$FALLBACK", fallback)
   end
   orisa.send_user_edit_file(kind, current)
 end
@@ -224,17 +231,20 @@ end
 -- templates
 
 user.edit_template = [[
+local $PACKAGE = {}
 
-function handlers.$KIND(kind, sender, name, payload)
+function $PACKAGE.handler(kind, sender, name, payload)
   -- sample message handling; try it with /ping
   if name == "ping" then
     orisa.send(sender, "pong", payload)
   else 
-    -- fallback to behavior of system.object, if you like
-    -- (includes handling for /set)
-    main("system.object", sender, name, payload)
+    -- fallback to behavior of $FALLBACK, if you like
+    -- (includes handling for /set, etc)
+    main("$FALLBACK", sender, name, payload)
   end
 end
+
+return $PACKAGE
 ]]  
 
 return user
