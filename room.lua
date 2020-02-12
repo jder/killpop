@@ -1,6 +1,6 @@
-local system_room = {}
+local room = {}
 
-function handlers.system_room(kind, sender, name, payload)
+function room.handler(kind, sender, name, payload)
   if name == "tell" then 
     for _, object in ipairs(orisa.get_children(orisa.self)) do
       orisa.send(object, "tell", payload)
@@ -17,10 +17,10 @@ function handlers.system_room(kind, sender, name, payload)
         orisa.send(payload.entrance, "connect_destination", {destination = orisa.self})
       end
     end
-    main("system/object", sender, name, payload)
+    main("system.object", sender, name, payload)
   else
-    main("system/object", sender, name, payload)
+    main("system.object", sender, name, payload)
   end
 end
 
-return system_room 
+return room 

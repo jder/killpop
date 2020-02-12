@@ -1,25 +1,25 @@
-local system_user = {}
+local user = {}
 
-local base = require "base"
+local base = require "system.base"
 
-function handlers.system_user(kind, sender, name, payload)
+function user.handler(kind, sender, name, payload)
   if name == "say" then
     local patterns = {
       -- Backtick means "evaluate this"
-      ["^`(.*)"] = system_user.run_eval,
-      ["^/look$"] = system_user.run_look,
-      ["^/l$"] = system_user.run_look,
-      ["^/inspect *(.*)"] = system_user.run_inspect,
-      ["^/x *(.*)"] = system_user.run_inspect,
-      ["^/edit +(%g+)"] = system_user.run_edit,
-      ["^/set +(%g+) +(%g+) +(.+)"] = system_user.run_set,
-      ["^/get +(%g+) +(%g+)"] = system_user.run_get,
-      ["^/ping +(%g+)"] = system_user.run_ping,
-      ["^/move +(%g+) +(%g+)"] = system_user.run_move,
-      ["^/create +(%g+)"] = system_user.run_create,
-      ["^/dig +(%g+)"] = system_user.run_dig,
-      ["^/go +(%g+)"] = system_user.run_go
-      -- ["^/help"] = system_user.run_help,
+      ["^`(.*)"] = user.run_eval,
+      ["^/look$"] = user.run_look,
+      ["^/l$"] = user.run_look,
+      ["^/inspect *(.*)"] = user.run_inspect,
+      ["^/x *(.*)"] = user.run_inspect,
+      ["^/edit +(%g+)"] = user.run_edit,
+      ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
+      ["^/get +(%g+) +(%g+)"] = user.run_get,
+      ["^/ping +(%g+)"] = user.run_ping,
+      ["^/move +(%g+) +(%g+)"] = user.run_move,
+      ["^/create +(%g+)"] = user.run_create,
+      ["^/dig +(%g+)"] = user.run_dig,
+      ["^/go +(%g+)"] = user.run_go
+      -- ["^/help"] = user.run_help,
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
@@ -50,17 +50,17 @@ function handlers.system_user(kind, sender, name, payload)
     orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
     orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
   elseif name == "save_file" then
-    orisa.send_save_custom_space_content(payload.name, payload.content)
+    orisa.send_save_local_package_content(payload.name, payload.content)
   elseif name == "disconnected" then
     orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
   elseif name == "pong" then
     orisa.send_user_tell("got pong from " .. base.get_name(sender))
   else
-    main("system/object", sender, name, payload)
+    main("system.object", sender, name, payload)
   end
 end
 
-function system_user.run_eval(cmd) 
+function user.run_eval(cmd) 
   local chunk, err = load(cmd, "command", "t")
   if not chunk then
     orisa.send_user_tell("Compile Error: " .. err)
@@ -74,7 +74,7 @@ function system_user.run_eval(cmd)
   end
 end
 
-function system_user.run_look()
+function user.run_look()
   local room = orisa.get_parent(orisa.self)
   if not room then
     orisa.send_user_tell("You aren't anywhere.")
@@ -99,7 +99,7 @@ function system_user.run_look()
   end
 end
 
-function system_user.run_inspect(query)
+function user.run_inspect(query)
   local target = base.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
@@ -126,15 +126,15 @@ function system_user.run_inspect(query)
 
 end
 
-function system_user.run_edit(kind)
-  local current = orisa.get_custom_space_content(kind)
+function user.run_edit(kind)
+  local current = orisa.get_local_package_content(kind)
   if current == nil then
-    current = string.gsub(system_user.edit_template, "$KIND", string.gsub(kind, "/", "_"))
+    current = string.gsub(user.edit_template, "$KIND", string.gsub(kind, "/", "_"))
   end
   orisa.send_user_edit_file(kind, current)
 end
 
-function system_user.run_set(query, attr, value)
+function user.run_set(query, attr, value)
   local target = base.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
@@ -144,7 +144,7 @@ function system_user.run_set(query, attr, value)
   orisa.send(target, "set", {name = attr, value = value})
 end
 
-function system_user.run_get(query, attr)
+function user.run_get(query, attr)
   local target = base.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
@@ -154,7 +154,7 @@ function system_user.run_get(query, attr)
   orisa.send_user_tell(base.get_name(target) .. "." .. attr .. " = " .. orisa.get_attr(target, attr))
 end
 
-function system_user.run_ping(query)
+function user.run_ping(query)
   local target = base.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
@@ -165,7 +165,7 @@ function system_user.run_ping(query)
   orisa.send(target, "ping")
 end
 
-function system_user.run_move(query, dest_query)
+function user.run_move(query, dest_query)
   local target = base.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
@@ -181,11 +181,11 @@ function system_user.run_move(query, dest_query)
   orisa.send(target, "move", {destination = dest})
 end
 
-function system_user.run_create(kind)
+function user.run_create(kind)
   orisa.send_create_object(orisa.self, kind, {owner = orisa.self})
 end
 
-function system_user.run_dig(direction, destination_query)
+function user.run_dig(direction, destination_query)
   local parent = orisa.get_parent(orisa.self)
   if parent == nil then
     orisa.send_user_tell("You aren't anywhere.")
@@ -201,10 +201,10 @@ function system_user.run_dig(direction, destination_query)
     end
   end
 
-  orisa.send_create_object(parent, "system/door", {owner = orisa.self, direction = direction, destination = destination})
+  orisa.send_create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
 end
 
-function system_user.run_go(direction)
+function user.run_go(direction)
   door = base.find(direction)
   if door == nil then
     orisa.send_user_tell("I don't see " .. direction .. " here.")
@@ -223,19 +223,18 @@ end
 
 -- templates
 
-system_user.edit_template = [[
-require "main"
+user.edit_template = [[
 
 function handlers.$KIND(kind, sender, name, payload)
   -- sample message handling; try it with /ping
   if name == "ping" then
     orisa.send(sender, "pong", payload)
   else 
-    -- fallback to behavior of system/object, if you like
+    -- fallback to behavior of system.object, if you like
     -- (includes handling for /set)
-    main("system/object", sender, name, payload)
+    main("system.object", sender, name, payload)
   end
 end
 ]]  
 
-return system_user
+return user

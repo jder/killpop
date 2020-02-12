@@ -1,19 +1,25 @@
--- global list of handlers which modules can register themselves in
-handlers = {}
+--[[ 
+  system.main is always loaded and exports this single global function
+  to handle messages. It loads modules named after object kinds and calls
+  their handler function.
 
-require "system_object"
-require "system_user"
-require "system_room"
-require "system_door"
-
-local base = require "base"
+  Users can create objects of kinds $username.foo and edit lua files
+  for the same name.
+]]
 
 function main(kind, sender, name, payload)
-  local underscored = string.gsub(kind, "/", "_")
-  local handler = handlers[underscored]
-  if handler then
-    handler(kind, sender, name, payload)
+  local success, result = pcall(require, kind)
+  if success and result.handler then
+    result.handler(kind, sender, name, payload)
+  elseif string.match(kind, ".user$") and kind ~= "system.user" then
+    -- for users, we fall back to system user as a safety mechanism and
+    -- because users are initially created before they have a package
+    main("system.user", sender, name, payload)
   else
-    print("Unknown kind " .. kind)
+    if success then 
+      print(kind, "doesn't have a handler")
+    else
+      print("No handler for kind", kind, "package error:", result)
+    end
   end
 end

@@ -1,6 +1,6 @@
-local system_object = {}
+local object = {}
 
-function handlers.system_object(kind, sender, name, payload)
+function object.handler(kind, sender, name, payload)
   local from_owner = (sender == orisa.self or sender == orisa.get_attr(orisa.self, "owner") or sender == "#1")
   if name == "set" then 
     if from_owner then
@@ -23,11 +23,11 @@ function handlers.system_object(kind, sender, name, payload)
     else 
       print("Ignoring duplicate created message")
     end
-  elseif not system_object.ignored_messages[name] then
+  elseif not object.ignored_messages[name] then
     print("unknown message", name)
   end
 end
 
-system_object.ignored_messages = {tell = true, parent_changed = true, child_added = true}
+object.ignored_messages = {tell = true, parent_changed = true, child_added = true}
 
-return system_object
+return object
