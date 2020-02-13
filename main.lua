@@ -20,6 +20,7 @@ function main(kind, sender, name, payload)
     if package == "user" and top ~= "system" then
       -- for users, we fall back to system user as a safety mechanism and
       -- because users are initially created before they have a package
+      print("Defaulting to system.user due to error", result)
       main("system.user", sender, name, payload)
     else
       if success then 
