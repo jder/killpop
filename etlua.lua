@@ -1,7 +1,24 @@
 -- from https://github.com/leafo/etlua
 -- MIT license Copyright (C) 2014 by Leaf Corcoran
 -- Modified by Jesse Rusak to remove debug library use
-local VERSION = "1.3.0"
+
+-- See link above for full usage. Examples from there:
+--[[
+  local etlua = require "etlua"
+  local template = etlua.compile("my template <%= foo %>")
+  template({foo = "something"})
+]]
+
+-- Other examples:
+--[[
+  Hello <%= name %>,
+  Here are your items:
+  <% for i, item_raw_html in pairs(items) do %>
+   * <%- item_raw_html -%>
+  <% end %> 
+]]
+
+local VERSION = "1.3.0-jder"
 local insert, concat
 do
   local _obj_0 = table

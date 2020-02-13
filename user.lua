@@ -1,6 +1,7 @@
 local user = {}
 
 local base = require "system.base"
+local etlua = require "system.etlua"
 
 function user.handler(kind, sender, name, payload)
   if name == "say" then
@@ -79,14 +80,6 @@ function user.run_look()
   if not room then
     orisa.send_user_tell("You aren't anywhere.")
   else 
-    orisa.send_user_tell(base.get_name(room))
-    local description = orisa.get_attr(room, "description")
-    if description then
-      orisa.send_user_tell(description)
-    else
-      orisa.send_user_tell("It's unremarkable.")
-    end
-
     local children = orisa.get_children(room)
     local contents = "Present here: \n  "
     for i, child in ipairs(children) do
@@ -95,7 +88,11 @@ function user.run_look()
       end
       contents = contents .. base.get_name(child) .. " (" .. child .. ")"
     end
-    orisa.send_user_tell(contents)
+    orisa.send_user_tell_html(user.room_template({
+      room_name = base.get_name(room),
+      room_description = orisa.get_attr(room, "description"),
+      children_description = contents
+    }))
   end
 end
 
@@ -245,6 +242,12 @@ function $PACKAGE.handler(kind, sender, name, payload)
 end
 
 return $PACKAGE
-]]  
+]]
+
+user.room_template = etlua.compile [[
+<p><b><%= room_name %></b></p>
+<p><%= room_description or "It's unremarkable" %></p>
+<p>Present: <%= children_description %></p>
+]]
 
 return user

@@ -1,12 +1,14 @@
 local base = {}
 
+local etlua = require "system.etlua"
+
 --- Matches patterns and calls functions with the captures
 -- TODO: some actual parsing so we don't reject extra args like `/l foo` as "unknown command /l"
 function base.parse(text, patterns)
   for pat, handler in pairs(patterns) do
     local captures = {string.match(text, pat)}
     if captures[1] ~= nil then
-      orisa.send_user_tell(text)
+      orisa.send_user_tell_html(base.echo_template({text = text}))
       handler(table.unpack(captures))
       return true
     end
@@ -33,7 +35,11 @@ function base.get_name(object)
     return custom_name
   end
 
-  return "object"
+  -- fall back to "object" or "room" etc
+  local kind = orisa.get_kind(object)
+  local _, name = base.split_kind(kind)
+
+  return name or "object"
 end
 
 function base.find(query, parent)
@@ -65,5 +71,7 @@ function base.find(query, parent)
 
   return nil
 end
+
+base.echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
 
 return base
