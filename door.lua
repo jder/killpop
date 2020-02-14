@@ -7,7 +7,7 @@ function door.handler(kind, sender, name, payload)
       if payload.destination then
         orisa.set_attr(orisa.self, "destination", destination)
       else
-        orisa.send_create_object(nil, "system.room", {owner = payload.owner, entrance = orisa.self})
+        orisa.create_object(nil, "system.room", {owner = payload.owner, entrance = orisa.self})
       end
     end
      -- we want object behavior, too. would be nice to have a nicer super()

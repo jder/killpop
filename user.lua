@@ -81,7 +81,7 @@ function user.run_look()
     orisa.send_user_tell("You aren't anywhere.")
   else 
     local children = orisa.get_children(room)
-    local contents = "Present here: \n  "
+    local contents = ""
     for i, child in ipairs(children) do
       if i ~= 1 then
         contents = contents .. ", "
@@ -186,7 +186,7 @@ function user.run_move(query, dest_query)
 end
 
 function user.run_create(kind)
-  orisa.send_create_object(orisa.self, kind, {owner = orisa.self})
+  orisa.create_object(orisa.self, kind, {owner = orisa.self})
 end
 
 function user.run_dig(direction, destination_query)
@@ -205,7 +205,7 @@ function user.run_dig(direction, destination_query)
     end
   end
 
-  orisa.send_create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
+  orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
 end
 
 function user.run_go(direction)
