@@ -4,10 +4,12 @@ local base = require "system.base"
 local etlua = require "system.etlua"
 
 function user.handler(kind, sender, name, payload)
-  if name == "say" then
+  if name == "do" then
     local patterns = {
-      -- Backtick means "evaluate this"
       ["^`(.*)"] = user.run_eval,
+      ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
+      ["^/run (.*)"] = user.run_run,
+      ["^/eval (.*)"] = user.run_eval,
       ["^/look$"] = user.run_look,
       ["^/l$"] = user.run_look,
       ["^/inspect *(.*)"] = user.run_inspect,
@@ -20,16 +22,11 @@ function user.handler(kind, sender, name, payload)
       ["^/create +(%g+)"] = user.run_create,
       ["^/dig +(%g+)"] = user.run_dig,
       ["^/go +(%g+)"] = user.run_go,
-      ["^/help"] = user.run_help
+      ["^/help"] = user.run_help,
+      ["^([^/`'\"].*)"] = user.run_do,
+      default = user.run_fallback
     }
-    if not base.parse(payload, patterns) then
-      local unknown = string.match(payload, "^/(%g*)")
-      if unknown ~= nil then
-        orisa.send_user_tell("Unknown command " .. unknown)
-      else 
-        orisa.send(orisa.get_parent(orisa.self), "tell", {message = orisa.get_username(orisa.self) .. ": " .. payload})
-      end
-    end
+    base.parse(payload.message, patterns)
   elseif name == "tell" then
     orisa.send_user_tell(payload.message)
     local history = orisa.get_state(orisa.self, "history")
@@ -61,7 +58,23 @@ function user.handler(kind, sender, name, payload)
   end
 end
 
-function user.run_eval(cmd) 
+function user.run_fallback(text)
+  orisa.send_user_tell("Unknown command " .. text)
+end
+
+function user.run_do(text)
+  orisa.send(orisa.get_parent(orisa.self), "do", {message = text})
+end
+
+function user.run_say(text)
+  orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
+end
+
+function user.run_eval(cmd)
+  return user.run_run("return (" .. cmd .. ")")
+end
+
+function user.run_run(cmd) 
   local chunk, err = load(cmd, "command", "t")
   if not chunk then
     orisa.send_user_tell("Compile Error: " .. err)
@@ -258,5 +271,8 @@ user.room_template = etlua.compile [[
 <p><%= room_description or "It's unremarkable" %></p>
 <p>Present: <%= children_description %></p>
 ]]
+
+user.echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
+
 
 return user
