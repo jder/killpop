@@ -10,7 +10,7 @@ function door.handler(kind, sender, name, payload)
         orisa.create_object(nil, "system.room", {owner = payload.owner, entrance = orisa.self})
       end
     end
-     -- we want object behavior, too. would be nice to have a nicer super()
+     -- we want object behavior, too. would be nice to have a super()
     main("system.object", sender, name, payload)
   elseif name == "connect_destination" then
     if orisa.original_user == orisa.get_attr(orisa.self, "owner") and orisa.get_attr(orisa.self, "destination") == nil then
