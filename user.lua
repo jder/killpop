@@ -19,8 +19,8 @@ function user.handler(kind, sender, name, payload)
       ["^/move +(%g+) +(%g+)"] = user.run_move,
       ["^/create +(%g+)"] = user.run_create,
       ["^/dig +(%g+)"] = user.run_dig,
-      ["^/go +(%g+)"] = user.run_go
-      -- ["^/help"] = user.run_help,
+      ["^/go +(%g+)"] = user.run_go,
+      ["^/help"] = user.run_help
     }
     if not base.parse(payload, patterns) then
       local unknown = string.match(payload, "^/(%g*)")
@@ -73,6 +73,15 @@ function user.run_eval(cmd)
       orisa.send_user_tell("Runtime Error: " .. tostring(result))
     end
   end
+end
+
+function user.run_help()
+  orisa.send_user_tell("Orisa Help:")
+  orisa.send_user_tell("  <kildorf> jder! I got Orisa to run locally\
+  <kildorf> > Welcome! Run /help for a quick tutorial.\
+  <kildorf> > Unknown command help\
+  <jder> ...\
+  <jder> it's aspirational")  
 end
 
 function user.run_look()
