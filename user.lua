@@ -48,7 +48,7 @@ function user.handler(kind, sender, name, payload)
     orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
     orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
   elseif name == "save_file" then
-    orisa.send_save_local_package_content(payload.name, payload.content)
+    orisa.send_save_live_package_content(payload.name, payload.content)
   elseif name == "disconnected" then
     orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
   elseif name == "pong" then
@@ -146,7 +146,7 @@ function user.run_inspect(query)
 end
 
 function user.run_edit(kind)
-  local current = orisa.get_local_package_content(kind)
+  local current = orisa.get_live_package_content(kind)
   if current == nil then
     local top, package = base.split_kind(kind)
     local fallback = "system.object"
