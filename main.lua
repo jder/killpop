@@ -4,30 +4,31 @@
   their handler function. 
     
   Other files in this repo are used with e.g. `require "system.object"`
-
-  Users can create objects of kinds $username.foo and edit lua files
-  for the same name. They have the type $username.user.
 ]]
 
-local base = require "system.base"
+local util = require "system.util"
 
-function main(kind, sender, name, payload)
+function main(name, payload)
+  local kind = orisa.get_kind(orisa.self)
+
   local success, result = pcall(require, kind)
-  if success and result.handler then
-    result.handler(kind, sender, name, payload)
-  else
-    local top, package = base.split_kind(kind)
+  if not success then
+    local top, package = util.split_kind(kind)
     if package == "user" and top ~= "system" then
       -- for users, we fall back to system user as a safety mechanism and
       -- because users are initially created before they have a package
       print("Defaulting to system.user due to error", result)
-      main("system.user", sender, name, payload)
-    else
-      if success then 
-        print(kind, "doesn't have a handler")
-      else
-        print("No handler for kind", kind, "package error:", result)
-      end
+      success, result = pcall(require, "system.user")
     end
+  end
+  
+  if success then
+    if result.handler then
+      result.handler(name, payload)
+    else
+      print(kind, "doesn't have a handler")
+    end
+  else
+    print("Unable to load package for", kind, "error:", result)
   end
 end

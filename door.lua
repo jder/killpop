@@ -1,23 +1,16 @@
-local door = {}
+local super = require "system.object"
+local util = require "system.util"
 
-function door.handler(kind, sender, name, payload)
-  if name == "created" then
-    if orisa.get_state(orisa.self, "created") == nil then
-      orisa.set_attr(orisa.self, "name", payload.direction)
-      if payload.destination then
-        orisa.set_attr(orisa.self, "destination", destination)
-      else
-        orisa.create_object(nil, "system.room", {owner = payload.owner, entrance = orisa.self})
-      end
+local door = util.kind(super)
+
+function door.created(payload) 
+  if super.created(payload) then
+    orisa.set_attr(orisa.self, "name", payload.direction)
+    local destination = payload.destination
+    if not destination then
+      destination = orisa.create_object(nil, "system.room", {owner = payload.owner})
     end
-     -- we want object behavior, too. would be nice to have a super()
-    main("system.object", sender, name, payload)
-  elseif name == "connect_destination" then
-    if orisa.original_user == orisa.get_attr(orisa.self, "owner") and orisa.get_attr(orisa.self, "destination") == nil then
-      orisa.set_attr(orisa.self, "destination", payload.destination)
-    end
-  else
-    main("system.object", sender, name, payload)
+    orisa.set_attr(orisa.self, "destination", destination)
   end
 end
 

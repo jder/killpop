@@ -1,69 +1,77 @@
-local user = {}
-
-local base = require "system.base"
+local util = require "system.util"
 local etlua = require "system.etlua"
 
-function user.handler(kind, sender, name, payload)
-  if name == "do" then
-    local patterns = {
-      ["^`(.*)"] = user.run_eval,
-      ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
-      ["^/run (.*)"] = user.run_run,
-      ["^/eval (.*)"] = user.run_eval,
-      ["^/look$"] = user.run_look,
-      ["^/l$"] = user.run_look,
-      ["^/inspect *(.*)"] = user.run_inspect,
-      ["^/x *(.*)"] = user.run_inspect,
-      ["^/edit +(%g+)"] = user.run_edit,
-      ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
-      ["^/get +(%g+) +(%g+)"] = user.run_get,
-      ["^/ping +(%g+)"] = user.run_ping,
-      ["^/move +(%g+) +(%g+)"] = user.run_move,
-      ["^/create +(%g+)"] = user.run_create,
-      ["^/dig +(%g+)"] = user.run_dig,
-      ["^/go +(%g+)"] = user.run_go,
-      ["^/help"] = user.run_help,
-      ["^([^/`'\"].*)"] = user.run_do,
-      default = user.run_fallback
-    }
-    base.parse(payload.message, patterns)
-  elseif name == "tell" then
-    orisa.send_user_tell(payload.message)
-    local history = orisa.get_state(orisa.self, "history")
-    if not history then
-      history = {}
-    end
-    table.insert(history, payload.message)
-    -- truncate history to latest 50% of rows once hits capacity
-    local max_history = 100
-    if #history > max_history then
-      history = table.move(history, max_history/2, #history, 1, {})
-    end
-    orisa.set_state(orisa.self, "history", history)
-  elseif name == "connected" then
-    local history = orisa.get_state(orisa.self, "history")
-    if history then
-      orisa.send_user_backlog(history)
-    end
-    orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
-    orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
-  elseif name == "save_file" then
-    orisa.send_save_live_package_content(payload.name, payload.content)
-  elseif name == "disconnected" then
-    orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
-  elseif name == "pong" then
-    orisa.send_user_tell("got pong from " .. base.get_name(sender))
-  else
-    main("system.object", sender, name, payload)
+local super = require "system.object"
+
+local user = util.kind(super)
+
+function user.command(payload)
+  local patterns = {
+    ["^`(.*)"] = user.run_eval,
+    ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
+    ["^/run (.*)"] = user.run_run,
+    ["^/eval (.*)"] = user.run_eval,
+    ["^/look$"] = user.run_look,
+    ["^/l$"] = user.run_look,
+    ["^/inspect *(.*)"] = user.run_inspect,
+    ["^/x *(.*)"] = user.run_inspect,
+    ["^/edit +(%g+)"] = user.run_edit,
+    ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
+    ["^/get +(%g+) +(%g+)"] = user.run_get,
+    ["^/ping +(%g+)"] = user.run_ping,
+    ["^/move +(%g+) +(%g+)"] = user.run_move,
+    ["^/create +(%g+)"] = user.run_create,
+    ["^/dig +(%g+)"] = user.run_dig,
+    ["^/go +(%g+)"] = user.run_go,
+    ["^/help"] = user.run_help,
+    ["^([^/`'\"].*)"] = user.run_command,
+    default = user.run_fallback
+  }
+  util.parse(payload.message, patterns)
+end
+
+function user.tell(payload)
+  orisa.send_user_tell(payload.message)
+  local history = orisa.get_state(orisa.self, "history")
+  if not history then
+    history = {}
   end
+  table.insert(history, payload.message)
+  -- truncate history to latest 50% of rows once hits capacity
+  local max_history = 100
+  if #history > max_history then
+    history = table.move(history, max_history/2, #history, 1, {})
+  end
+  orisa.set_state(orisa.self, "history", history)
+end
+
+function user.connected(payload)
+  local history = orisa.get_state(orisa.self, "history")
+  if history then
+    orisa.send_user_backlog(history)
+  end
+  orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
+  orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
+end
+
+function user.disconnected(payload)
+  orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
+end
+
+function user.save_file(payload)
+  orisa.send_save_live_package_content(payload.name, payload.content)
+end
+
+function user.pong(payload)
+  orisa.send_user_tell("got pong from " .. util.get_name(orisa.sender))
 end
 
 function user.run_fallback(text)
   orisa.send_user_tell("Unknown command " .. text)
 end
 
-function user.run_do(text)
-  orisa.send(orisa.get_parent(orisa.self), "do", {message = text})
+function user.run_command(text)
+  orisa.send(orisa.get_parent(orisa.self), "command", {message = text})
 end
 
 function user.run_say(text)
@@ -108,10 +116,10 @@ function user.run_look()
       if i ~= 1 then
         contents = contents .. ", "
       end
-      contents = contents .. base.get_name(child) .. " (" .. child .. ")"
+      contents = contents .. util.get_name(child) .. " (" .. child .. ")"
     end
     orisa.send_user_tell_html(user.room_template({
-      room_name = base.get_name(room),
+      room_name = util.get_name(room),
       room_description = orisa.get_attr(room, "description"),
       children_description = contents
     }))
@@ -119,13 +127,13 @@ function user.run_look()
 end
 
 function user.run_inspect(query)
-  local target = base.find(query)
+  local target = util.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
     return
   end
 
-  local prefix = base.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
+  local prefix = util.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
   local description = orisa.get_attr(target, "description")
   if description == nil then
     orisa.send_user_tell(prefix .. " is uninteresting.")
@@ -139,7 +147,7 @@ function user.run_inspect(query)
     if i ~= 1 then
       contents = contents .. ", "
     end
-    contents = contents .. base.get_name(child) .. " (" .. child .. ")"
+    contents = contents .. util.get_name(child) .. " (" .. child .. ")"
   end
   orisa.send_user_tell(contents)
 
@@ -148,7 +156,7 @@ end
 function user.run_edit(kind)
   local current = orisa.get_live_package_content(kind)
   if current == nil then
-    local top, package = base.split_kind(kind)
+    local top, package = util.split_kind(kind)
     local fallback = "system.object"
     if package == "user" then
       fallback = "system.user"
@@ -161,7 +169,7 @@ function user.run_edit(kind)
 end
 
 function user.run_set(query, attr, value)
-  local target = base.find(query)
+  local target = util.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
     return
@@ -171,34 +179,34 @@ function user.run_set(query, attr, value)
 end
 
 function user.run_get(query, attr)
-  local target = base.find(query)
+  local target = util.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
     return
   end
 
-  orisa.send_user_tell(base.get_name(target) .. "." .. attr .. " = " .. orisa.get_attr(target, attr))
+  orisa.send_user_tell(util.get_name(target) .. "." .. attr .. " = " .. orisa.get_attr(target, attr))
 end
 
 function user.run_ping(query)
-  local target = base.find(query)
+  local target = util.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
     return
   end
 
-  orisa.send_user_tell("sending ping to " .. base.get_name(target))
+  orisa.send_user_tell("sending ping to " .. util.get_name(target))
   orisa.send(target, "ping")
 end
 
 function user.run_move(query, dest_query)
-  local target = base.find(query)
+  local target = util.find(query)
   if target == nil then 
     orisa.send_user_tell("I don't see " .. query)
     return
   end
 
-  local dest = base.find(dest_query)
+  local dest = util.find(dest_query)
   if dest == nil then 
     orisa.send_user_tell("I don't see " .. dest_query)
     return
@@ -220,7 +228,7 @@ function user.run_dig(direction, destination_query)
   
   local destination = nil
   if destination_query ~= nil then
-    destination = base.find(destination_query)
+    destination = util.find(destination_query)
     if destination == nil then
       orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
       return
@@ -231,7 +239,7 @@ function user.run_dig(direction, destination_query)
 end
 
 function user.run_go(direction)
-  door = base.find(direction)
+  door = util.find(direction)
   if door == nil then
     orisa.send_user_tell("I don't see " .. direction .. " here.")
     return
@@ -250,17 +258,13 @@ end
 -- templates
 
 user.edit_template = [[
-local $PACKAGE = {}
+local util = require "system.util"
+local super = require "$FALLBACK"
+local $PACKAGE = util.kind(super)
 
-function $PACKAGE.handler(kind, sender, name, payload)
+function $PACKAGE.ping(payload)
   -- sample message handling; try it with /ping
-  if name == "ping" then
-    orisa.send(sender, "pong", payload)
-  else 
-    -- fallback to behavior of $FALLBACK, if you like
-    -- (includes handling for /set, etc)
-    main("$FALLBACK", sender, name, payload)
-  end
+  orisa.send(orisa.sender, "pong", payload)
 end
 
 return $PACKAGE
