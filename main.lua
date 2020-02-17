@@ -29,7 +29,7 @@ function main(name, payload)
   
   if success then
     if result.handler then
-      result.handler(name, payload)
+      return result.handler(name, payload)
     else
       print(kind, "doesn't have a handler")
     end

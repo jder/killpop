@@ -24,11 +24,25 @@ function room.say(payload)
 end
 
 function room.command(payload)
-  print("would interpret this as a command:", payload.message)
+  local verbs = {[orisa.self] = main("get_verbs")}
+  for _, object in ipairs(orisa.get_children(orisa.self)) do
+    verbs[object] = orisa.query(object, "get_verbs")
+  end
+
+  for object, verbs in pairs(verbs) do
+    for name, verb_info in pairs(verbs) do
+      for _, pat in ipairs(verb_info.patterns) do
+        if pat == payload.message then
+          print("Would execute", object, name)
+          return
+        end
+      end
+    end
+  end
 end
 
 room.look = util.verb {
-  {"look|gaze|admire $self", "look|gaze|admire at $self"},
+  {"look", "look|gaze|admire $self", "look|gaze|admire at $self"},
   function(payload)
     print("would look at ", orisa.self)
   end

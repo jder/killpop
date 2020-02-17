@@ -10,16 +10,15 @@ function util.kind(superkind)
   function result.handler(name, payload)
     local to_call = result[name]
     if to_call then
-      to_call(payload)
+      return to_call(payload)
     elseif superkind then
-      superkind.handler(name, payload)
+      return superkind.handler(name, payload)
     else
       print("Object", orisa.self, "ignoring message", name)
     end
   end
 
   -- special support for collecting verbs across superkinds 
-  -- TODO: this can't be called from a room right now
   function result.get_verbs()
     local verbs = {}
     if superkind and superkind.get_verbs then
