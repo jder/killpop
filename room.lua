@@ -11,7 +11,7 @@ end
 
 function room.tell_others(payload)
   for _, object in ipairs(orisa.get_children(orisa.self)) do
-    if object ~= sender then
+    if object ~= orisa.sender then
       orisa.send(object, "tell", payload)
     end
   end
@@ -19,7 +19,7 @@ end
 
 function room.say(payload)
   for _, object in ipairs(orisa.get_children(orisa.self)) do
-    orisa.send(object, "tell", {message = string.format("%s: %s", orisa.get_username(sender), payload.message)})
+    orisa.send(object, "tell", {message = string.format("%s: %s", orisa.get_username(orisa.sender), payload.message)})
   end
 end
 

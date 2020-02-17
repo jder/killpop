@@ -10,7 +10,7 @@ end
 function object.set(payload)
   if object.from_owner() then
     orisa.set_attr(orisa.self, payload.name, payload.value)
-    orisa.send(sender, "tell", { message = payload.name .. " set" })
+    orisa.send(orisa.sender, "tell", { message = payload.name .. " set" })
   else 
     print("ignoring unpermitted set")
   end

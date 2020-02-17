@@ -2,7 +2,6 @@ local util = {}
 
 local etlua = require "system.etlua"
 
---- Calls
 --- If a message is unhandled, tries sending it to the superkind
 --- (this also affects verbs)
 function util.kind(superkind)
@@ -19,6 +18,8 @@ function util.kind(superkind)
     end
   end
 
+  -- special support for collecting verbs across superkinds 
+  -- TODO: this can't be called from a room right now
   function result.get_verbs()
     local verbs = {}
     if superkind and superkind.get_verbs then
