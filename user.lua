@@ -164,7 +164,19 @@ function user.run_set(query, attr, value)
     return
   end
 
-  orisa.send(target, "set", {name = attr, value = value})
+  local chunk, err = load("return (" .. value .. ")", "value", "t")
+  if not chunk then
+    orisa.send_user_tell("Error parsing value: " .. err)
+    return
+  end
+
+  local success, result = pcall(chunk)
+  if not success then
+    orisa.send_user_tell("Error evaluating value: ".. result)
+    return
+  end
+
+  orisa.send(target, "set", {name = attr, value = result})
 end
 
 function user.run_get(query, attr)
@@ -239,7 +251,6 @@ end
 function user.parent_changed(payload)
   user.run_command("look")
 end
-
 
 -- templates
 

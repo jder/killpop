@@ -54,22 +54,33 @@ function util.verb(verb)
 end
 
 --- Takes direct_object/indirect_object info from commands
---- Returns (true, thing) if there is one
---- If there is more than one, returns (false, message_for_user)
+--- Returns (thing, optional_message) if there is one clear candidate
+--- If there is more than one, returns (nil, message_for_user)
 --- In the future we can pass more options here to help pick smartly
 function util.disambig_object(object_info)
   if not object_info then
-    return false, "Expected some object."
+    return nil, "Expected some object."
   elseif #object_info.found == 0 then
-    return false, string.format("I don't see \"%s\" here.", object_info.text)
+    return nil, string.format("I don't see \"%s\" here.", object_info.text)
   elseif #object_info.found > 1 then
+    local holding = {}
+    for _, match in ipairs(object_info.found) do
+      if orisa.get_parent(match) == orisa.original_user then
+        table.insert(holding, match)
+      end
+    end
+    
+    if #holding == 1 then
+      return holding[1], string.format("(Assuming the %s you are holding.)", object_info.text)
+    end
+
     local options = {}
     for _, match in ipairs(object_info.found) do
       table.insert(options, string.format("%s (%s)", util.get_name(match), match))
     end
-    return false, string.format("Sorry, \"%s\" is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
+    return nil, string.format("Sorry, \"%s\" is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
   else
-    return true, object_info.found[1]
+    return object_info.found[1], nil
   end
 end
 

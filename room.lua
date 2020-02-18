@@ -91,17 +91,16 @@ room.look = util.verb {
   {"l|look", "l|look at $this", "l|look $this"},
   function(payload)
     local children = orisa.get_children(orisa.self)
-    local contents = ""
-    for i, child in ipairs(children) do
-      if i ~= 1 then
-        contents = contents .. ", "
+    local contents = {}
+    for _, child in ipairs(children) do
+      if not orisa.get_attr(child, "hidden") then
+        table.insert(contents, util.get_name(child))
       end
-      contents = contents .. util.get_name(child) .. " (" .. child .. ")"
     end
     orisa.send(payload.user, "tell_html", {html = room.look_template({
       room_name = util.get_name(orisa.self),
       room_description = orisa.get_attr(orisa.self, "description"),
-      children_description = contents
+      children_description = table.concat(contents, ", ")
     })})
   end
 }
@@ -115,20 +114,31 @@ room.look_template = etlua.compile [[
 room.examine = util.verb {
   {"x $any", "examine $any"},
   function(payload)
-    local success, result = util.disambig_object(payload.command.direct_object)
-    if not success then
-      orisa.send(payload.user, "tell", {message = result})
-      return
+    local target, message = util.disambig_object(payload.command.direct_object)
+    if message then
+      orisa.send(payload.user, "tell", {message = message})
     end
 
-    local target = result
-  
-    local description = orisa.get_attr(target, "description")
-    if description == nil then
-      orisa.send(payload.user, "tell", {message = util.get_name(target) .. " is uninteresting."})
-    else
-      orisa.send(payload.user, "tell", {message = description})
+    if target then
+      local description = orisa.get_attr(target, "description")
+      if description == nil then
+        orisa.send(payload.user, "tell", {message = util.get_name(target) .. " is uninteresting."})
+      else
+        orisa.send(payload.user, "tell", {message = description})
+      end
     end
+  end
+}
+
+room.inventory = util.verb {
+  {"inventory|i"},
+  function(payload)
+    local children = orisa.get_children(payload.user)
+    local contents = {}
+    for i, child in ipairs(children) do
+      table.insert(contents, util.get_name(child))
+    end
+    orisa.send(payload.user, "tell", {message = string.format("You are holding: %s", table.concat(contents, ", "))})
   end
 }
 
