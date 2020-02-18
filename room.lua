@@ -71,6 +71,22 @@ function room.command(payload)
   end
 end
 
+--- Describe an action by payload.user to others as payload.others, to self as payload.me
+--- e.g. orisa.send(room, "tell_action", {user = user, me = "You laugh", others = username .. " laughs."})
+function room.tell_action(payload)
+  if payload.others then
+    for _, object in ipairs(orisa.get_children(orisa.self)) do
+      if object ~= payload.user then
+        orisa.send(object, "tell", {message = payload.others})
+      end
+    end
+  end
+
+  if payload.me then
+    orisa.send(payload.user, "tell", {message = payload.me})
+  end
+end
+
 room.look = util.verb {
   {"l|look", "l|look at $this", "l|look $this"},
   function(payload)

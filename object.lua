@@ -18,9 +18,9 @@ end
 
 function object.move(payload)
   if object.from_owner() then
-    orisa.send_move_object(orisa.self, payload.destination)
+    orisa.move_object(orisa.self, payload.destination)
   else 
-    print("ignoring unpermitted set")
+    print("ignoring unpermitted move")
   end
 end
 

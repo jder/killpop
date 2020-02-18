@@ -9,19 +9,22 @@ function user.command(payload)
   local patterns = {
     ["^`(.*)"] = user.run_eval,
     ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
+    ["^/say *(.*)"] = {handler = user.run_say, echo = false},
     ["^/run (.*)"] = user.run_run,
     ["^/eval (.*)"] = user.run_eval,
     ["^/inspect *(.*)"] = user.run_inspect,
     ["^/i *(.*)"] = user.run_inspect,
-    ["^/edit +(%g+)"] = user.run_edit,
-    ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
-    ["^/get +(%g+) +(%g+)"] = user.run_get,
-    ["^/ping +(%g+)"] = user.run_ping,
-    ["^/move +(%g+) +(%g+)"] = user.run_move,
-    ["^/create +(%g+)"] = user.run_create,
-    ["^/dig +(%g+)"] = user.run_dig,
-    ["^/go +(%g+)"] = user.run_go,
-    ["^/help"] = user.run_help,
+    ["^/edit +(%g+)$"] = user.run_edit,
+    ["^/set +(%g+) + (%g+) +(.+)"] = user.run_set,
+    ["^/get +(%g+) +(%g+)$"] = user.run_get,
+    ["^/ping +(%g+)$"] = user.run_ping,
+    ["^/move +(%g+) +(%g+)$"] = user.run_move,
+    ["^/banish +(%g+)$"] = user.run_banish,
+    ["^/b +(%g+)$"] = user.run_banish,
+    ["^/create +(%g+)$"] = user.run_create,
+    ["^/dig +(%g+)$"] = user.run_dig,
+    ["^/dig +(%g+) +(.+)"] = user.run_dig,
+    ["^/help$"] = user.run_help,
     ["^([^/`'\"].*)"] = user.run_command,
     default = user.run_fallback
   }
@@ -201,6 +204,15 @@ function user.run_move(query, dest_query)
   orisa.send(target, "move", {destination = dest})
 end
 
+function user.run_banish(query)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+  orisa.send(target, "move", {destination = nil})
+end
+
 function user.run_create(kind)
   orisa.create_object(orisa.self, kind, {owner = orisa.self})
 end
@@ -224,22 +236,10 @@ function user.run_dig(direction, destination_query)
   orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
 end
 
-function user.run_go(direction)
-  door = util.find(direction)
-  if door == nil then
-    orisa.send_user_tell("I don't see " .. direction .. " here.")
-    return
-  end
-
-  destination = orisa.get_attr(door, "destination")
-  orisa.send_user_tell("You go " .. direction .. ".")
-  orisa.send_move_object(orisa.self, destination)
-  local parent = orisa.get_parent(orisa.self)
-  if parent then
-    orisa.send(parent, "tell_others", {message = string.format("%s goes %s.", orisa.get_username(orisa.self), direction)})
-  end
-  orisa.send(destination, "tell_others", {message = string.format("%s arrives.", orisa.get_username(orisa.self))})
+function user.parent_changed(payload)
+  user.run_command("look")
 end
+
 
 -- templates
 
