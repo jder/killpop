@@ -15,7 +15,7 @@ function user.command(payload)
     ["^/inspect *(.*)"] = user.run_inspect,
     ["^/i *(.*)"] = user.run_inspect,
     ["^/edit +(%g+)$"] = user.run_edit,
-    ["^/set +(%g+) + (%g+) +(.+)"] = user.run_set,
+    ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
     ["^/get +(%g+) +(%g+)$"] = user.run_get,
     ["^/ping +(%g+)$"] = user.run_ping,
     ["^/move +(%g+) +(%g+)$"] = user.run_move,
@@ -174,7 +174,7 @@ function user.run_get(query, attr)
     return
   end
 
-  orisa.send_user_tell(util.get_name(target) .. "." .. attr .. " = " .. orisa.get_attr(target, attr))
+  orisa.send_user_tell(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
 end
 
 function user.run_ping(query)
