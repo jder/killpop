@@ -49,7 +49,7 @@ function room.command(payload)
         if not success then
           print("Failed to parse verb pattern", pat, matcher)
         elseif commands.match(user_parsed, matcher, object) then
-          table.insert(matches, {object = object, name = name})
+          table.insert(matches, {object = object, name = name, priority = verb_info.priority})
           break
         end
       end
@@ -58,17 +58,26 @@ function room.command(payload)
 
   if #matches == 0 then
     orisa.send(orisa.sender, "tell", {message = string.format("Sorry, I didn't understand.")})
+    return
   elseif #matches ~= 1 then
-    local options = {}
-    for _, match in ipairs(matches) do
-      table.insert(options, string.format("%s with %s (%s)", match.name, util.get_name(match.object), match.object))
+    -- sort highest priority first
+    table.sort(matches, function(a, b) return a.priority > b.priority end)
+    local highest_priority = matches[1].priority
+    if matches[2].priority == highest_priority then -- more than one of highest priority
+      local options = {}
+      for _, match in ipairs(matches) do
+        if match.priority == highest_priority then
+          table.insert(options, string.format("%s with %s (%s)", match.name, util.get_name(match.object), match.object))
+        end
+      end
+      -- TODO: more helpful
+      orisa.send(orisa.sender, "tell", {message = string.format("Sorry, that was ambiguous between: %s", table.concat(options, " or "))})
+      return
     end
-    -- TODO: more helpful
-    orisa.send(orisa.sender, "tell", {message = string.format("Sorry, that was ambiguous between: %s", table.concat(options, " or "))})
-  else
-    local match = matches[1]
-    orisa.send(match.object, match.name, {user = orisa.sender, room = orisa.self, command = user_parsed})
   end
+
+  local match = matches[1]
+  orisa.send(match.object, match.name, {user = orisa.sender, room = orisa.self, command = user_parsed})
 end
 
 --- Describe an action by payload.user to others as payload.others, to self as payload.me

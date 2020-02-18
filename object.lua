@@ -25,9 +25,9 @@ function object.move(payload)
 end
 
 function object.created(payload)
-  -- the this is sent once, right after we are created, by create_object; see calls to that for payload
+  -- this is sent once, right after we are created, by create_object; see calls to that for payload
   if orisa.get_state(orisa.self, "created") == nil then
-    for k, v in ipairs(payload.attrs) do
+    for k, v in pairs(payload.attrs) do
       orisa.set_attr(orisa.self, k, v)
     end
     orisa.set_attr(orisa.self, "owner", payload.owner)

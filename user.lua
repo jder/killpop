@@ -76,6 +76,13 @@ local function run_examine(query)
     orisa.send_user_tell(prefix .. ": " .. description)
   end
 
+  local parent = orisa.get_parent(target)
+  if parent then
+    orisa.send_user_tell(string.format("Parent is %s (%s)", util.get_name(parent), parent))
+  else
+    orisa.send_user_tell("Has no parent.")
+  end
+
   local children = orisa.get_children(target)
   local contents = "Contents: "
   for i, child in ipairs(children) do
@@ -88,6 +95,11 @@ local function run_examine(query)
 end
 
 local function run_edit(kind)
+  local top, package = util.split_kind(kind)
+  if top == nil then
+    -- probably just "cake" instead of "jder/live.cake"
+    kind = string.format("%s/live.%s", orisa.get_username(orisa.self), kind)
+  end
   local current = orisa.get_live_package_content(kind)
   if current == nil then
     local top, package = util.split_kind(kind)

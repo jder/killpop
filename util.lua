@@ -45,6 +45,13 @@ function util.kind(superkind)
   return result
 end
 
+util.priority = {
+  normal = 2, 
+  high = 3, 
+  low = 1, 
+  fallback = 0
+}
+
 function util.verb(verb)
   local patterns, body = table.unpack(verb)
 
@@ -52,7 +59,12 @@ function util.verb(verb)
     patterns = {patterns}
   end
   
-  local result = { verb_info = { patterns = patterns } };
+  local result = { 
+    verb_info = { 
+      patterns = patterns,
+      priority = verb.priority or util.priority.normal
+    } 
+  };
   setmetatable(result, { __call = function(t, ...)
     -- we drop the initial argument which is the table itself
     body(...) 
@@ -90,7 +102,7 @@ end
 -- e.g. util.split_kind("system.object") == "system", "object".
 -- Returns nil if it does not match the expected pattern.
 function util.split_kind(kind)
-  return string.match(kind, "^([a-zA-Z0-9_/-]+)%.([a-zA-Z0-9_-]+)$")
+  return string.match(kind, "^([a-zA-Z0-9_/]+)%.([a-zA-Z0-9_]+)$")
 end
 
 --- A quick description of this object
