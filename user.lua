@@ -5,28 +5,216 @@ local super = require "system.object"
 
 local user = util.kind(super)
 
+-- templates
+
+local edit_template = [[
+local util = require "system.util"
+local super = require "$FALLBACK"
+local $PACKAGE = util.kind(super)
+
+function $PACKAGE.ping(payload)
+  -- sample message handling; try it with /ping
+  orisa.send(orisa.sender, "pong", payload)
+end
+
+return $PACKAGE
+]]
+
+local echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
+
+local function run_fallback(text)
+  orisa.send_user_tell("Unknown command " .. text)
+end
+
+local function run_command(text)
+  orisa.send(orisa.get_parent(orisa.self), "command", {message = text})
+end
+
+local function run_say(text)
+  orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
+end
+
+local function run_eval(cmd)
+  return run_run("return (" .. cmd .. ")")
+end
+
+local function run_run(cmd) 
+  local chunk, err = load(cmd, "command", "t")
+  if not chunk then
+    orisa.send_user_tell("Compile Error: " .. err)
+  else
+    local success, result = pcall(chunk)
+    if success then
+      orisa.send_user_tell("Result: " .. tostring(result))
+    else
+      orisa.send_user_tell("Runtime Error: " .. tostring(result))
+    end
+  end
+end
+
+local function run_help()
+  orisa.send_user_tell("Orisa Help:")
+  orisa.send_user_tell("  <kildorf> jder! I got Orisa to run locally\
+  <kildorf> > Welcome! Run /help for a quick tutorial.\
+  <kildorf> > Unknown command help\
+  <jder> ...\
+  <jder> it's aspirational")  
+end
+
+local function run_examine(query)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  local prefix = util.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
+  local description = orisa.get_attr(target, "description")
+  if description == nil then
+    orisa.send_user_tell(prefix .. " has no description.")
+  else
+    orisa.send_user_tell(prefix .. ": " .. description)
+  end
+
+  local children = orisa.get_children(target)
+  local contents = "Contents: "
+  for i, child in ipairs(children) do
+    if i ~= 1 then
+      contents = contents .. ", "
+    end
+    contents = contents .. util.get_name(child) .. " (" .. child .. ")"
+  end
+  orisa.send_user_tell(contents)
+end
+
+local function run_edit(kind)
+  local current = orisa.get_live_package_content(kind)
+  if current == nil then
+    local top, package = util.split_kind(kind)
+    local fallback = "system.object"
+    if package == "user" then
+      fallback = "system.user"
+    end
+    current = edit_template
+    current = string.gsub(current, "$PACKAGE", package)
+    current = string.gsub(current, "$FALLBACK", fallback)
+  end
+  orisa.send_user_edit_file(kind, current)
+end
+
+local function run_set(query, attr, value)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  local chunk, err = load("return (" .. value .. ")", "value", "t")
+  if not chunk then
+    orisa.send_user_tell("Error parsing value: " .. err)
+    return
+  end
+
+  local success, result = pcall(chunk)
+  if not success then
+    orisa.send_user_tell("Error evaluating value: ".. result)
+    return
+  end
+
+  orisa.send(target, "set", {name = attr, value = result})
+end
+
+local function run_get(query, attr)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  orisa.send_user_tell(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
+end
+
+local function run_ping(query)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  orisa.send_user_tell("sending ping to " .. util.get_name(target))
+  orisa.send(target, "ping")
+end
+
+local function run_move(query, dest_query)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+
+  local dest = util.find(dest_query)
+  if dest == nil then 
+    orisa.send_user_tell("I don't see " .. dest_query)
+    return
+  end
+
+  orisa.send(target, "move", {destination = dest})
+end
+
+local function run_banish(query)
+  local target = util.find(query)
+  if target == nil then 
+    orisa.send_user_tell("I don't see " .. query)
+    return
+  end
+  orisa.send(target, "move", {destination = nil})
+end
+
+local function run_create(kind)
+  orisa.create_object(orisa.self, kind, {owner = orisa.self})
+end
+
+local function run_dig(direction, destination_query)
+  local parent = orisa.get_parent(orisa.self)
+  if parent == nil then
+    orisa.send_user_tell("You aren't anywhere.")
+    return
+  end
+  
+  local destination = nil
+  if destination_query ~= nil then
+    destination = util.find(destination_query)
+    if destination == nil then
+      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
+      return
+    end
+  end
+
+  orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
+end
+
 function user.command(payload)
   local patterns = {
-    ["^`(.*)"] = user.run_eval,
-    ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
-    ["^/say *(.*)"] = {handler = user.run_say, echo = false},
-    ["^/run (.*)"] = user.run_run,
-    ["^/eval (.*)"] = user.run_eval,
-    ["^/inspect *(.*)"] = user.run_inspect,
-    ["^/i *(.*)"] = user.run_inspect,
-    ["^/edit +(%g+)$"] = user.run_edit,
-    ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
-    ["^/get +(%g+) +(%g+)$"] = user.run_get,
-    ["^/ping +(%g+)$"] = user.run_ping,
-    ["^/move +(%g+) +(%g+)$"] = user.run_move,
-    ["^/banish +(%g+)$"] = user.run_banish,
-    ["^/b +(%g+)$"] = user.run_banish,
-    ["^/create +(%g+)$"] = user.run_create,
-    ["^/dig +(%g+)$"] = user.run_dig,
-    ["^/dig +(%g+) +(.+)"] = user.run_dig,
-    ["^/help$"] = user.run_help,
-    ["^([^/`'\"].*)"] = user.run_command,
-    default = user.run_fallback
+    ["^`(.*)"] = run_eval,
+    ["^[\"'](.*)"] = {handler = run_say, echo = false},
+    ["^/say *(.*)"] = {handler = run_say, echo = false},
+    ["^/run (.*)"] = run_run,
+    ["^/eval (.*)"] = run_eval,
+    ["^/examine *(.*)"] = run_examine,
+    ["^/x *(.*)"] = run_examine,
+    ["^/edit +(%g+)$"] = run_edit,
+    ["^/set +(%g+) +(%g+) +(.+)"] = run_set,
+    ["^/get +(%g+) +(%g+)$"] = run_get,
+    ["^/ping +(%g+)$"] = run_ping,
+    ["^/move +(%g+) +(%g+)$"] = run_move,
+    ["^/banish +(%g+)$"] = run_banish,
+    ["^/b +(%g+)$"] = run_banish,
+    ["^/create +(%g+)$"] = run_create,
+    ["^/dig +(%g+)$"] = run_dig,
+    ["^/dig +(%g+) +(.+)"] = run_dig,
+    ["^/help$"] = run_help,
+    ["^([^/`'\"].*)"] = run_command,
+    default = run_fallback
   }
   util.parse(payload.message, patterns)
 end
@@ -77,197 +265,8 @@ function user.pong(payload)
   orisa.send_user_tell("got pong from " .. util.get_name(orisa.sender))
 end
 
-function user.run_fallback(text)
-  orisa.send_user_tell("Unknown command " .. text)
-end
-
-function user.run_command(text)
-  orisa.send(orisa.get_parent(orisa.self), "command", {message = text})
-end
-
-function user.run_say(text)
-  orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
-end
-
-function user.run_eval(cmd)
-  return user.run_run("return (" .. cmd .. ")")
-end
-
-function user.run_run(cmd) 
-  local chunk, err = load(cmd, "command", "t")
-  if not chunk then
-    orisa.send_user_tell("Compile Error: " .. err)
-  else
-    local success, result = pcall(chunk)
-    if success then
-      orisa.send_user_tell("Result: " .. tostring(result))
-    else
-      orisa.send_user_tell("Runtime Error: " .. tostring(result))
-    end
-  end
-end
-
-function user.run_help()
-  orisa.send_user_tell("Orisa Help:")
-  orisa.send_user_tell("  <kildorf> jder! I got Orisa to run locally\
-  <kildorf> > Welcome! Run /help for a quick tutorial.\
-  <kildorf> > Unknown command help\
-  <jder> ...\
-  <jder> it's aspirational")  
-end
-
-function user.run_inspect(query)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-
-  local prefix = util.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
-  local description = orisa.get_attr(target, "description")
-  if description == nil then
-    orisa.send_user_tell(prefix .. " is uninteresting.")
-  else
-    orisa.send_user_tell(prefix .. ": " .. description)
-  end
-
-  local children = orisa.get_children(target)
-  local contents = "Contents: "
-  for i, child in ipairs(children) do
-    if i ~= 1 then
-      contents = contents .. ", "
-    end
-    contents = contents .. util.get_name(child) .. " (" .. child .. ")"
-  end
-  orisa.send_user_tell(contents)
-end
-
-function user.run_edit(kind)
-  local current = orisa.get_live_package_content(kind)
-  if current == nil then
-    local top, package = util.split_kind(kind)
-    local fallback = "system.object"
-    if package == "user" then
-      fallback = "system.user"
-    end
-    current = user.edit_template
-    current = string.gsub(current, "$PACKAGE", package)
-    current = string.gsub(current, "$FALLBACK", fallback)
-  end
-  orisa.send_user_edit_file(kind, current)
-end
-
-function user.run_set(query, attr, value)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-
-  local chunk, err = load("return (" .. value .. ")", "value", "t")
-  if not chunk then
-    orisa.send_user_tell("Error parsing value: " .. err)
-    return
-  end
-
-  local success, result = pcall(chunk)
-  if not success then
-    orisa.send_user_tell("Error evaluating value: ".. result)
-    return
-  end
-
-  orisa.send(target, "set", {name = attr, value = result})
-end
-
-function user.run_get(query, attr)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-
-  orisa.send_user_tell(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
-end
-
-function user.run_ping(query)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-
-  orisa.send_user_tell("sending ping to " .. util.get_name(target))
-  orisa.send(target, "ping")
-end
-
-function user.run_move(query, dest_query)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-
-  local dest = util.find(dest_query)
-  if dest == nil then 
-    orisa.send_user_tell("I don't see " .. dest_query)
-    return
-  end
-
-  orisa.send(target, "move", {destination = dest})
-end
-
-function user.run_banish(query)
-  local target = util.find(query)
-  if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
-    return
-  end
-  orisa.send(target, "move", {destination = nil})
-end
-
-function user.run_create(kind)
-  orisa.create_object(orisa.self, kind, {owner = orisa.self})
-end
-
-function user.run_dig(direction, destination_query)
-  local parent = orisa.get_parent(orisa.self)
-  if parent == nil then
-    orisa.send_user_tell("You aren't anywhere.")
-    return
-  end
-  
-  local destination = nil
-  if destination_query ~= nil then
-    destination = util.find(destination_query)
-    if destination == nil then
-      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
-      return
-    end
-  end
-
-  orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
-end
-
 function user.parent_changed(payload)
-  user.run_command("look")
+  run_command("look")
 end
-
--- templates
-
-user.edit_template = [[
-local util = require "system.util"
-local super = require "$FALLBACK"
-local $PACKAGE = util.kind(super)
-
-function $PACKAGE.ping(payload)
-  -- sample message handling; try it with /ping
-  orisa.send(orisa.sender, "pong", payload)
-end
-
-return $PACKAGE
-]]
-
-user.echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
-
 
 return user

@@ -2,13 +2,13 @@ local util = require "system.util"
 
 local object = util.kind()
 
-function object.from_owner()
+local function from_owner()
   local sender = orisa.sender 
   return (sender == orisa.self or sender == orisa.get_attr(orisa.self, "owner") or sender == "#1")
 end
 
 function object.set(payload)
-  if object.from_owner() then
+  if from_owner() then
     orisa.set_attr(orisa.self, payload.name, payload.value)
     orisa.send(orisa.sender, "tell", { message = string.format("%s set to %s", payload.name, payload.value) })
   else 
@@ -17,7 +17,7 @@ function object.set(payload)
 end
 
 function object.move(payload)
-  if object.from_owner() then
+  if from_owner() then
     orisa.move_object(orisa.self, payload.destination)
   else 
     print("ignoring unpermitted move")
@@ -27,6 +27,9 @@ end
 function object.created(payload)
   -- the this is sent once, right after we are created, by create_object; see calls to that for payload
   if orisa.get_state(orisa.self, "created") == nil then
+    for k, v in ipairs(payload.attrs) do
+      orisa.set_attr(orisa.self, k, v)
+    end
     orisa.set_attr(orisa.self, "owner", payload.owner)
     orisa.set_state(orisa.self, "created", true)
     return true -- for subclasses to use

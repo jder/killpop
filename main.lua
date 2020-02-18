@@ -14,12 +14,17 @@ function main(name, payload)
   local success, result = pcall(require, kind)
   if not success then
     local top, package_name = util.split_kind(kind)
-    if package_name == "user" and top ~= "system" then
-      -- for users, we fall back to system user as a safety mechanism and
-      -- because users are initially created before they have a package
-      -- TODO: would be nice to make sure the user themselves sees this
-      print("user", kind, " failed to load; defaulting to system.user", result)
-      success, result = pcall(require, "system.user")
+    if top ~= "system" then
+      local fallback = "system.object"
+      -- some non-system package failed to load; fallback to an appropriate system package
+      print(kind, "failed to load; defaulting to system.object", result)
+      if package_name == "user" then
+        -- for users, we fall back to system user so they can do anything
+        -- since users are initially created before they have a package
+        -- TODO: would be nice to make sure the user themselves sees this
+        fallback = "system.user"
+      end
+      success, result = pcall(require, fallback)
       if success then
         -- for next time
         package.loaded[kind] = result

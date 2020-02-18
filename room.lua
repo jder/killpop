@@ -67,7 +67,7 @@ function room.command(payload)
     orisa.send(orisa.sender, "tell", {message = string.format("Sorry, that was ambiguous between: %s", table.concat(options, " or "))})
   else
     local match = matches[1]
-    orisa.send(match.object, match.name, {user = orisa.sender, command = user_parsed})
+    orisa.send(match.object, match.name, {user = orisa.sender, room = orisa.self, command = user_parsed})
   end
 end
 
@@ -114,7 +114,7 @@ room.look_template = etlua.compile [[
 room.examine = util.verb {
   {"x $any", "examine $any"},
   function(payload)
-    local target, message = util.disambig_object(payload.command.direct_object)
+    local target, message = commands.disambig_object(payload.command.direct_object)
     if message then
       orisa.send(payload.user, "tell", {message = message})
     end

@@ -2,11 +2,19 @@ local util = {}
 
 local etlua = require "system.etlua"
 
---- If a message is unhandled, tries sending it to the superkind
---- (this also affects verbs)
+local echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
+
+--- Create a new kind (module/package) which has a handler for messages
+--- and supports collecting verbs defined with util.verb
 function util.kind(superkind)
   local result = {}
+  
+  if type(superkind) == "string" then
+    superkind = require(superkind)
+  end
 
+  --- If a message is unhandled, tries sending it to the superkind
+  --- (this also affects verbs)
   function result.handler(name, payload)
     local to_call = result[name]
     if to_call then
@@ -53,37 +61,6 @@ function util.verb(verb)
   return result
 end
 
---- Takes direct_object/indirect_object info from commands
---- Returns (thing, optional_message) if there is one clear candidate
---- If there is more than one, returns (nil, message_for_user)
---- In the future we can pass more options here to help pick smartly
-function util.disambig_object(object_info)
-  if not object_info then
-    return nil, "Expected some object."
-  elseif #object_info.found == 0 then
-    return nil, string.format("I don't see \"%s\" here.", object_info.text)
-  elseif #object_info.found > 1 then
-    local holding = {}
-    for _, match in ipairs(object_info.found) do
-      if orisa.get_parent(match) == orisa.original_user then
-        table.insert(holding, match)
-      end
-    end
-    
-    if #holding == 1 then
-      return holding[1], string.format("(Assuming the %s you are holding.)", object_info.text)
-    end
-
-    local options = {}
-    for _, match in ipairs(object_info.found) do
-      table.insert(options, string.format("%s (%s)", util.get_name(match), match))
-    end
-    return nil, string.format("Sorry, \"%s\" is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
-  else
-    return object_info.found[1], nil
-  end
-end
-
 --- Matches patterns and calls functions with the captures
 -- TODO: some actual parsing so we don't reject extra args like `/l foo` as "unknown command /l"
 function util.parse(text, patterns)
@@ -97,7 +74,7 @@ function util.parse(text, patterns)
           handler = handler.handler
         end
         if echo then
-          orisa.send_user_tell_html(util.echo_template({text = text}))
+          orisa.send_user_tell_html(echo_template({text = text}))
         end
         handler(table.unpack(captures))
         return
@@ -113,7 +90,7 @@ end
 -- e.g. util.split_kind("system.object") == "system", "object".
 -- Returns nil if it does not match the expected pattern.
 function util.split_kind(kind)
-  return string.match(kind, "^([a-zA-Z0-9_/]+)%.([a-zA-Z0-9_]+)$")
+  return string.match(kind, "^([a-zA-Z0-9_/-]+)%.([a-zA-Z0-9_-]+)$")
 end
 
 --- A quick description of this object
@@ -146,7 +123,7 @@ function util.find(query, from)
 end
 
 --- Find all matching objects in the current location or inside of `from`, defaulting to current user
---- TODO: support multiple words, adjectives/aliases, prefixes, etc
+--- TODO: support multiple words, adjectives/aliases, prefixes, scores/ordering, etc
 function util.find_all(query, from)
   if string.match(query, "^#%d+$") then return {query} end
 
@@ -210,6 +187,39 @@ function util.tostring(v)
   end
 end
 
-util.echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
+local log_warned = {}
+
+--- Build a logger which can be turned on/off by user attributes.
+--- Returns a function to log which acts just like string.format except all args
+--- are util.tostring'ed first. (i.e. use %s or %q to substitute them)
+function util.logger(name)
+  local prefix = string.format("%s:", name)
+  local attr = "log_" .. name
+  if not log_warned[orisa.original_user .. ':' .. name] then
+    log_warned[orisa.original_user .. ':' .. name] = true
+    if orisa.get_attr(orisa.original_user, attr) then
+      print(string.format("Logger \"%s\" enabled; use `/set me %s false` to disable.", name, attr))
+    else
+      print(string.format("Logger \"%s\" disabled; use `/set me %s true` to enable.", name, attr))
+    end
+  end
+  return function(format, ...)
+    if orisa.get_attr(orisa.original_user, attr) then
+      print(prefix, string.format(format, util.tostring_all(...)))
+    end
+  end
+end
+
+function util.tostring_all(...)
+  -- This is pretty gross, sorry.
+  -- This is the only combination I could find which handled nil arguments in the 
+  -- middle of the list.
+  local inputs = table.pack(...)
+  local result = {}
+  for key, raw in pairs(inputs) do
+    result[key] = util.tostring(raw)
+  end
+  return table.unpack(result, 1, select("#", ...))
+end
 
 return util
