@@ -1,6 +1,7 @@
 local super = require "system.object"
 local util = require "system.util"
 local commands = require "system.commands"
+local etlua = require "system.etlua"
 
 local room = util.kind(super)
 
@@ -28,6 +29,7 @@ function room.command(payload)
   local success, user_parsed = pcall(commands.parse_user, payload.message)
   if not success then
     orisa.send(orisa.sender, "tell", {message = string.format("Unable to parse command: %s", user_parsed)})
+    return
   end
 
   local verbs = {[orisa.self] = main("get_verbs")}
@@ -65,14 +67,52 @@ function room.command(payload)
     orisa.send(orisa.sender, "tell", {message = string.format("Sorry, that was ambiguous between: %s", table.concat(options, " or "))})
   else
     local match = matches[1]
-    orisa.send(match.object, match.name, user_parsed)
+    orisa.send(match.object, match.name, {user = orisa.sender, command = user_parsed})
   end
 end
 
 room.look = util.verb {
-  {"watch", "admire $this", "gaze $this with $any", "look to $this"},
+  {"l|look", "l|look at $this", "l|look $this"},
   function(payload)
-    print("would look at", orisa.self, util.tostring(payload))
+    local children = orisa.get_children(orisa.self)
+    local contents = ""
+    for i, child in ipairs(children) do
+      if i ~= 1 then
+        contents = contents .. ", "
+      end
+      contents = contents .. util.get_name(child) .. " (" .. child .. ")"
+    end
+    orisa.send(payload.user, "tell_html", {html = room.look_template({
+      room_name = util.get_name(orisa.self),
+      room_description = orisa.get_attr(orisa.self, "description"),
+      children_description = contents
+    })})
+  end
+}
+
+room.look_template = etlua.compile [[
+<p><b><%= room_name %></b></p>
+<p><%= room_description or "It's unremarkable" %></p>
+<p>Present: <%= children_description %></p>
+]]
+
+room.examine = util.verb {
+  {"x $any", "examine $any"},
+  function(payload)
+    local success, result = util.disambig_object(payload.command.direct_object)
+    if not success then
+      orisa.send(payload.user, "tell", {message = result})
+      return
+    end
+
+    local target = result
+  
+    local description = orisa.get_attr(target, "description")
+    if description == nil then
+      orisa.send(payload.user, "tell", {message = util.get_name(target) .. " is uninteresting."})
+    else
+      orisa.send(payload.user, "tell", {message = description})
+    end
   end
 }
 

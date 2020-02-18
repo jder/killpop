@@ -11,10 +11,8 @@ function user.command(payload)
     ["^[\"'](.*)"] = {handler = user.run_say, echo = false},
     ["^/run (.*)"] = user.run_run,
     ["^/eval (.*)"] = user.run_eval,
-    ["^/look$"] = user.run_look,
-    ["^/l$"] = user.run_look,
     ["^/inspect *(.*)"] = user.run_inspect,
-    ["^/x *(.*)"] = user.run_inspect,
+    ["^/i *(.*)"] = user.run_inspect,
     ["^/edit +(%g+)"] = user.run_edit,
     ["^/set +(%g+) +(%g+) +(.+)"] = user.run_set,
     ["^/get +(%g+) +(%g+)"] = user.run_get,
@@ -43,6 +41,16 @@ function user.tell(payload)
     history = table.move(history, max_history/2, #history, 1, {})
   end
   orisa.set_state(orisa.self, "history", history)
+end
+
+function user.tell_html(payload)
+  -- TODO: history or move history to backend
+  if orisa.sender ~= orisa.get_parent(orisa.self) then
+    print("Ignoring html tell from someone other than the room")
+    return
+  end
+
+  orisa.send_user_tell_html(payload.html)
 end
 
 function user.connected(payload)
@@ -105,27 +113,6 @@ function user.run_help()
   <jder> it's aspirational")  
 end
 
-function user.run_look()
-  local room = orisa.get_parent(orisa.self)
-  if not room then
-    orisa.send_user_tell("You aren't anywhere.")
-  else 
-    local children = orisa.get_children(room)
-    local contents = ""
-    for i, child in ipairs(children) do
-      if i ~= 1 then
-        contents = contents .. ", "
-      end
-      contents = contents .. util.get_name(child) .. " (" .. child .. ")"
-    end
-    orisa.send_user_tell_html(user.room_template({
-      room_name = util.get_name(room),
-      room_description = orisa.get_attr(room, "description"),
-      children_description = contents
-    }))
-  end
-end
-
 function user.run_inspect(query)
   local target = util.find(query)
   if target == nil then 
@@ -150,7 +137,6 @@ function user.run_inspect(query)
     contents = contents .. util.get_name(child) .. " (" .. child .. ")"
   end
   orisa.send_user_tell(contents)
-
 end
 
 function user.run_edit(kind)
@@ -268,12 +254,6 @@ function $PACKAGE.ping(payload)
 end
 
 return $PACKAGE
-]]
-
-user.room_template = etlua.compile [[
-<p><b><%= room_name %></b></p>
-<p><%= room_description or "It's unremarkable" %></p>
-<p>Present: <%= children_description %></p>
 ]]
 
 user.echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]

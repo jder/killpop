@@ -53,6 +53,26 @@ function util.verb(verb)
   return result
 end
 
+--- Takes direct_object/indirect_object info from commands
+--- Returns (true, thing) if there is one
+--- If there is more than one, returns (false, message_for_user)
+--- In the future we can pass more options here to help pick smartly
+function util.disambig_object(object_info)
+  if not object_info then
+    return false, "Expected some object."
+  elseif #object_info.found == 0 then
+    return false, string.format("I don't see \"%s\" here.", object_info.text)
+  elseif #object_info.found > 1 then
+    local options = {}
+    for _, match in ipairs(object_info.found) do
+      table.insert(options, string.format("%s (%s)", util.get_name(match), match))
+    end
+    return false, string.format("Sorry, \"%s\" is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
+  else
+    return true, object_info.found[1]
+  end
+end
+
 --- Matches patterns and calls functions with the captures
 -- TODO: some actual parsing so we don't reject extra args like `/l foo` as "unknown command /l"
 function util.parse(text, patterns)
@@ -105,8 +125,8 @@ function util.get_name(object)
 end
 
 -- Quick method for finding an object assuming it's unambiguous
-function util.find(query, parent)
-  local all = util.find_all(query, parent)
+function util.find(query, from)
+  local all = util.find_all(query, from)
   if #all == 0 then
     return nil
   end
@@ -114,23 +134,25 @@ function util.find(query, parent)
   return all[1]
 end
 
---- Find all matching objects in the current location or inside yourself
+--- Find all matching objects in the current location or inside of `from`, defaulting to current user
 --- TODO: support multiple words, adjectives/aliases, prefixes, etc
-function util.find_all(query, parent)
+function util.find_all(query, from)
   if string.match(query, "^#%d+$") then return {query} end
 
+  if from == nil then
+    from = orisa.original_user
+  end
+
   if query == "me" then
-    return {orisa.original_user}
+    return {from}
   end
 
   if query == "here" then
-    return {orisa.get_parent(orisa.original_user)}
+    return {orisa.get_parent(from)}
   end
 
-  if parent == nil then
-    parent = orisa.get_parent(orisa.self)
-  end
-
+  local parent = orisa.get_parent(from)
+  
   local results = {}
 
   if parent ~= nil then 
@@ -139,13 +161,18 @@ function util.find_all(query, parent)
         table.insert(results, child)
       end
     end
+
+    if util.get_name(parent) == query then
+      table.insert(results, parent)
+    end
   end
 
-  for _, child in ipairs(orisa.get_children(orisa.self)) do
+  for _, child in ipairs(orisa.get_children(from)) do
     if util.get_name(child) == query then
       table.insert(results, child)
     end
   end
+
 
   return results
 end

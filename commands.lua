@@ -64,7 +64,7 @@ end
 --- Parses a textual pattern for a verb to be matched against a user command
 --- The general form of the verb pattern is a sequence of space separated pieces:
 --- * the verb itself, with options separated by |. Required.
---- * the direct object specifier, which may be absent or $this or $any. 
+--- * the direct object specifier, which may be absent or $this or $any. (TODO: maybe types or requiring single-matches in the future)
 --- * the preposition specifier, with options separated by |. Required if there is an indirect object specifier.
 --- * the indirect object specifier, which may be absent or $this or $any. 
 --- For example:
