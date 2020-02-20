@@ -135,9 +135,13 @@ function util.find(query, from)
 end
 
 --- Find all matching objects in the current location or inside of `from`, defaulting to current user
---- TODO: support multiple words, adjectives/aliases, prefixes, scores/ordering, etc
+--- TODO: prefixes, scores/ordering, normalizing whitespace/case (happens in commands right now)
 function util.find_all(query, from)
   if string.match(query, "^#%d+$") then return {query} end
+
+  -- in case someone copy-pastes "something (#13)"
+  local paren_id = string.match(query, "%((#%d+)%)")
+  if paren_id then return {paren_id} end
 
   if from == nil then
     from = orisa.original_user
@@ -157,24 +161,39 @@ function util.find_all(query, from)
 
   if parent ~= nil then 
     for _, child in ipairs(orisa.get_children(parent)) do
-      if util.get_name(child) == query then
+      if util.object_matches(child, query) then
         table.insert(results, child)
       end
     end
 
-    if util.get_name(parent) == query then
+    if util.object_matches(parent, query) then
       table.insert(results, parent)
     end
   end
 
   for _, child in ipairs(orisa.get_children(from)) do
-    if util.get_name(child) == query then
+    if util.object_matches(child, query) then
       table.insert(results, child)
     end
   end
 
-
   return results
+end
+
+--- Does the text given describe this object? (Assuming both are lowercase & space-separated.)
+function util.object_matches(object, text)
+  if util.get_name(object) == text then
+    return true
+  end
+
+  local aliases = orisa.get_attr(object, "aliases") or {}
+  for _, alias in ipairs(aliases) do
+    if alias == text then
+      return true
+    end
+  end
+
+  return false
 end
 
 -- splits the string around the given punctuation character, ignoring doubled separators

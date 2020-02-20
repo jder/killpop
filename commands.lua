@@ -182,7 +182,7 @@ function commands.disambig_object(object_info)
   if not object_info then
     return nil, "Expected some object."
   elseif #object_info.found == 0 then
-    return nil, string.format("I don't see \"%s\" here.", object_info.text)
+    return nil, string.format("I don't see %q here.", object_info.text)
   elseif #object_info.found > 1 then
     local holding = {}
     for _, match in ipairs(object_info.found) do
@@ -199,7 +199,7 @@ function commands.disambig_object(object_info)
     for _, match in ipairs(object_info.found) do
       table.insert(options, string.format("%s (%s)", util.get_name(match), match))
     end
-    return nil, string.format("Sorry, \"%s\" is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
+    return nil, string.format("Sorry, %q is ambiguous; could be: %s", object_info.text, table.concat(options, " or "))
   else
     return object_info.found[1], nil
   end

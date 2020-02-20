@@ -34,10 +34,6 @@ local function run_say(text)
   orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
 end
 
-local function run_eval(cmd)
-  return run_run("return (" .. cmd .. ")")
-end
-
 local function run_run(cmd) 
   local chunk, err = load(cmd, "command", "t")
   if not chunk then
@@ -50,6 +46,10 @@ local function run_run(cmd)
       orisa.send_user_tell("Runtime Error: " .. tostring(result))
     end
   end
+end
+
+local function run_eval(cmd)
+  return run_run("return (" .. cmd .. ")")
 end
 
 local function run_help()
