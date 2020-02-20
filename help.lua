@@ -34,18 +34,18 @@ topic {
 }
 
 topic { 
-  name = "building", 
-  summary = "How to build and edit new objects.",
+  name = "commands", 
+  summary = "How to build and edit out-of-character.",
   function()
-    return "kinds, /create, /edit, /get, /set, /dig, etc"
+    return "kinds, /create, /edit, /get, /set, /dig, /eval, /run etc"
   end
 }
 
 topic { 
-  name = "code", 
+  name = "objects", 
   summary = "How to write Lua code for an object's behavior.",
   function()
-    return "/eval, /run, orisa.send, orisa.query, attrs, state, inheritance + privacy, browser console"
+    return "packages, orisa.send, orisa.query, attrs, state, inheritance + privacy"
   end
 }
 
@@ -53,11 +53,11 @@ topic {
   name = "libs", 
   summary = "Standard libraries available to Lua code.",
   function()
-    return "require & packages, util.*, etlua, logging"
+    return "require & packages, util.*, etlua, logging, browser console"
   end
 }
 
-topic { 
+topic {
   name = "verbs", 
   summary = "How verbs and command-parsing work.",
   function()
