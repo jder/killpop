@@ -1,5 +1,6 @@
 local util = require "system.util"
 local etlua = require "system.etlua"
+local help = require "system.help"
 
 local super = require "system.object"
 
@@ -52,13 +53,13 @@ local function run_eval(cmd)
   return run_run("return (" .. cmd .. ")")
 end
 
-local function run_help()
-  orisa.send_user_tell("Orisa Help:")
-  orisa.send_user_tell("  <kildorf> jder! I got Orisa to run locally\
-  <kildorf> > Welcome! Run /help for a quick tutorial.\
-  <kildorf> > Unknown command help\
-  <jder> ...\
-  <jder> it's aspirational")  
+local function run_help(topic, rest)
+  if topic == nil then topic = "top" end
+  if help[topic] then
+    orisa.send_user_tell_html(help[topic](rest))
+  else
+    orisa.send_user_tell(string.format("No help found on %q", topic))
+  end
 end
 
 local function run_examine(query)
@@ -224,7 +225,9 @@ function user.command(payload)
     ["^/create +(%g+)$"] = run_create,
     ["^/dig +(%g+)$"] = run_dig,
     ["^/dig +(%g+) +(.+)"] = run_dig,
-    ["^/help$"] = run_help,
+    ["^/help *$"] = run_help,
+    ["^/help +([a-z%.]+) *$"] = run_help,
+    ["^/help +([a-z%.]+) +(.+)"] = run_help,
     ["^([^/`'\"].*)"] = run_command,
     default = run_fallback
   }

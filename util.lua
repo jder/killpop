@@ -88,7 +88,12 @@ function util.parse(text, patterns)
         if echo then
           orisa.send_user_tell_html(echo_template({text = text}))
         end
-        handler(table.unpack(captures))
+        -- if we captured the whole thing, it's got no captures so don't pass args
+        if #captures == 1 and text == captures[1] then
+          handler()
+        else
+          handler(table.unpack(captures))
+        end
         return
       end
     end

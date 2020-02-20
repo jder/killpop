@@ -268,7 +268,7 @@ do
       end
       return function(env, ...)
         local buffer
-        setmetatable(env_holder, {__index =  env, __newindex = env})
+        setmetatable(env_holder, {__index = function(t, k) return env[k] or _G[k] end, __newindex = env})
         buffer, err = self:run(fn, ...)
         if buffer then
           return concat(buffer)
