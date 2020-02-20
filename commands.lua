@@ -145,7 +145,7 @@ function match_type(object, type, verb_owner)
 end
 
 function commands.match(user, matcher, verb_owner)
-  log("Matching %q with matcher %s for %s", user.text, nil, verb_owner)
+  log("Matching %q with matcher %s for %s", user.text, matcher, verb_owner)
   if not (user.verb and matcher.verb_options[user.verb]) then
     log("Verb %s not in options %s", user.verb, matcher.verb_options)
     return false
