@@ -88,12 +88,7 @@ function util.parse(text, patterns)
         if echo then
           orisa.send_user_tell_html(echo_template({text = text}))
         end
-        -- if we captured the whole thing, it's got no captures so don't pass args
-        if #captures == 1 and text == captures[1] then
-          handler()
-        else
-          handler(table.unpack(captures))
-        end
+        handler(table.unpack(captures))
         return
       end
     end
@@ -260,6 +255,31 @@ end
 
 function util.title(t)
   return string.gsub(string.gsub(string.lower(t), "^%g", string.upper), "%f[%g]%g", string.upper)
+end
+
+function util.current_room(from)
+  if from == nil then
+    from = orisa.self
+  end
+  local parent = orisa.get_parent(from)
+  if parent == nil then
+    return from
+  else
+    return util.current_room(parent)
+  end
+end
+
+function util.is_inside(child, parent)
+  if child == parent or child == nil then
+    return false
+  end
+
+  local next_child = orisa.get_parent(child)
+  if next_child == parent then
+    return true
+  end
+  
+  return util.is_inside(next_child, parent)
 end
 
 return util

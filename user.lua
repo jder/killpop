@@ -28,7 +28,7 @@ local function run_fallback(text)
 end
 
 local function run_command(text)
-  orisa.send(orisa.get_parent(orisa.self), "command", {message = text})
+  orisa.send(util.current_room(orisa.self), "command", {message = text})
 end
 
 local function run_say(text)
@@ -54,12 +54,15 @@ local function run_eval(cmd)
 end
 
 local function run_help(topic, rest)
-  if topic == nil then topic = "top" end
   if help[topic] then
     orisa.send_user_tell_html(help[topic](rest))
   else
     orisa.send_user_tell(string.format("No help found on %q", topic))
   end
+end
+
+local function run_help_top()
+  run_help("top")
 end
 
 local function run_examine(query)
@@ -95,12 +98,17 @@ local function run_examine(query)
   orisa.send_user_tell(contents)
 end
 
-local function run_edit(kind)
+local function expand_kind(kind)
   local top, package = util.split_kind(kind)
   if top == nil then
     -- probably just "cake" instead of "jder/live.cake"
     kind = string.format("%s/live.%s", orisa.get_username(orisa.self), kind)
   end
+  return kind
+end
+
+local function run_edit(kind)
+  kind = expand_kind(kind)
   local current = orisa.get_live_package_content(kind)
   if current == nil then
     local top, package = util.split_kind(kind)
@@ -184,7 +192,7 @@ local function run_banish(query)
 end
 
 local function run_create(kind)
-  orisa.create_object(orisa.self, kind, {owner = orisa.self})
+  orisa.create_object(orisa.self, expand_kind(kind), {owner = orisa.self})
 end
 
 local function run_dig(direction, destination_query)
@@ -207,6 +215,7 @@ local function run_dig(direction, destination_query)
 end
 
 function user.command(payload)
+  assert(orisa.sender == orisa.self, "refusing to run command from someone other than ourselves") -- only run commands from the user
   local patterns = {
     ["^`(.*)"] = run_eval,
     ["^[\"'](.*)"] = {handler = run_say, echo = false},
@@ -225,7 +234,7 @@ function user.command(payload)
     ["^/create +(%g+)$"] = run_create,
     ["^/dig +(%g+)$"] = run_dig,
     ["^/dig +(%g+) +(.+)"] = run_dig,
-    ["^/help *$"] = run_help,
+    ["^/help *$"] = run_help_top,
     ["^/help +([a-z%.]+) *$"] = run_help,
     ["^/help +([a-z%.]+) +(.+)"] = run_help,
     ["^([^/`'\"].*)"] = run_command,
@@ -251,7 +260,7 @@ end
 
 function user.tell_html(payload)
   -- TODO: history or move history to backend
-  if orisa.sender ~= orisa.get_parent(orisa.self) then
+  if orisa.sender ~= util.current_room(orisa.self) then
     print("Ignoring html tell from someone other than the room")
     return
   end

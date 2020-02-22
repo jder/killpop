@@ -27,7 +27,7 @@ end
 function object.created(payload)
   -- this is sent once, right after we are created, by create_object; see calls to that for payload
   if orisa.get_state(orisa.self, "created") == nil then
-    for k, v in pairs(payload.attrs) do
+    for k, v in pairs(payload.attrs or {}) do
       orisa.set_attr(orisa.self, k, v)
     end
     orisa.set_attr(orisa.self, "owner", payload.owner)

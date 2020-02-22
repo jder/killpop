@@ -21,7 +21,7 @@ local log = util.logger("commands")
 --- * preposition from the above list, text
 --- * indirect_object is nil or a table just like direct_object
 function commands.parse_user(text)
-  log("Parsing text %q", text)
+  log("Parsing text %q sender %s", text, orisa.sender)
 
   local words = {}
   local preposition_index = nil
@@ -173,26 +173,36 @@ function commands.match(user, matcher, verb_owner)
   return true
 end
 
---- Takes direct_object/indirect_object info
+--- Takes direct_object/indirect_object info and the (containing) verb info.
 --- Returns (thing, optional_message) if there is one clear candidate
 --- If there is more than one, returns (nil, message_for_user)
 --- In the future we can pass more options here to help pick smartly,
 --- have match scores, etc
-function commands.disambig_object(object_info)
+--- Options:
+--- * prefer = function which takes (object, verb_payload, object_info) and 
+---   returns either (false) or (true, message) 
+---   indicating which objects are preferred. If exactly one of the >1 options
+---   returns true, we use it and show the user the message, if any. 
+---   See commands.prefer_* for common ones.
+function commands.disambig_object(verb_payload, object_info, options)
+  options = options or {}
   if not object_info then
     return nil, "Expected some object."
   elseif #object_info.found == 0 then
     return nil, string.format("I don't see %q here.", object_info.text)
   elseif #object_info.found > 1 then
-    local holding = {}
+    local prefer = options.prefer or commands.prefer_holding -- by default we prefer holding
+    local preferred = {} -- list of (object, message)
     for _, match in ipairs(object_info.found) do
-      if orisa.get_parent(match) == orisa.original_user then
-        table.insert(holding, match)
+      local is_preferred, message = prefer(match, verb_payload, object_info)
+      if is_preferred then
+        table.insert(preferred, {match, message})
       end
     end
 
-    if #holding == 1 then
-      return holding[1], string.format("(Assuming the %s you are holding.)", object_info.text)
+    if #preferred == 1 then
+      local result, message = table.unpack(preferred[1])
+      return result, message
     end
 
     local options = {}
@@ -204,5 +214,25 @@ function commands.disambig_object(object_info)
     return object_info.found[1], nil
   end
 end
+
+function commands.prefer_holding(object, verb_payload, object_info)
+  if util.is_inside(object, verb_payload.user) then
+    return true, string.format("(Assuming the %s you are holding.)", object_info.text)
+  end
+  return false
+end
+
+function commands.prefer_nearby(object, verb_payload, object_info)
+  if util.is_inside(object, verb_payload.user) then
+    return false
+  end
+
+  if util.is_inside(object, util.current_room(verb_payload.user)) then
+    return true, string.format("(Assuming the %s nearby.)", object_info.text)
+  end
+
+  return false
+end
+
 
 return commands

@@ -80,6 +80,7 @@ topic {
   name = "verbs", 
   summary = "How verbs and command-parsing work.",
   function()
+    -- things usually trust the room they're in & rooms usually define common verbs
     return "util.verb, objects, patterns, etc"
   end
 }

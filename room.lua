@@ -121,9 +121,9 @@ room.look_template = etlua.compile [[
 ]]
 
 room.examine = util.verb {
-  {"x $any", "examine $any"},
+  "examine|x $any",
   function(payload)
-    local target, message = commands.disambig_object(payload.command.direct_object)
+    local target, message = commands.disambig_object(payload, payload.command.direct_object)
     if message then
       orisa.send(payload.user, "tell", {message = message})
     end
@@ -140,7 +140,7 @@ room.examine = util.verb {
 }
 
 room.inventory = util.verb {
-  {"inventory|i"},
+  "inventory|i",
   function(payload)
     local children = orisa.get_children(payload.user)
     local contents = {}
@@ -148,6 +148,52 @@ room.inventory = util.verb {
       table.insert(contents, util.get_name(child))
     end
     orisa.send(payload.user, "tell", {message = string.format("You are holding: %s", table.concat(contents, ", "))})
+  end
+}
+
+room.take = util.verb {
+  "take|t $any",
+  function (payload)
+    local target, message = commands.disambig_object(payload, payload.command.direct_object, {prefer=commands.prefer_nearby})
+    if message then
+      orisa.send(payload.user, "tell", {message = message})
+    end
+
+    if target then
+      if util.is_inside(target, payload.user) then
+        orisa.send(payload.user, "tell", {message = string.format("You're already holding %s.", payload.command.direct_object.text)})
+      else
+        local success = pcall(orisa.move_object, target, payload.user)
+        if success then
+          orisa.send(payload.user, "tell", {message = "Taken."})
+        else 
+          orisa.send(payload.user, "tell", {message = string.format("Can't take %s.", payload.command.direct_object.text)})
+        end
+      end
+    end
+  end
+}
+
+room.drop = util.verb {
+  "drop|d $any",
+  function (payload)
+    local target, message = commands.disambig_object(payload, payload.command.direct_object, {prefer=commands.prefer_holding})
+    if message then
+      orisa.send(payload.user, "tell", {message = message})
+    end
+
+    if target then
+      if not util.is_inside(target, payload.user) then
+        orisa.send(payload.user, "tell", {message = string.format("You're not holding %s.", payload.command.direct_object.text)})
+      else
+        local success = pcall(orisa.move_object, target, util.current_room(payload.user))
+        if success then
+          orisa.send(payload.user, "tell", {message = "Dropped."})
+        else 
+          orisa.send(payload.user, "tell", {message = string.format("Can't drop %s.", payload.command.direct_object.text)})
+        end
+      end
+    end
   end
 }
 
