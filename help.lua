@@ -6,7 +6,7 @@ local etlua = require "system.etlua"
 local topics = {}
 
 local function topic(t)
-  setmetatable(t, {__call = function(t, ...) return t[1](...) end})
+  setmetatable(t, {__call = function(...) return t[1](...) end})
   table.insert(topics, t)
   help[t.name] = t
 end
@@ -28,8 +28,27 @@ end
 topic { 
   name = "basics", 
   summary = "Talking and walking around the world.",
-  function()
-    return "say, go, look, inspect, etc"
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    <h2>Talking</h2>
+    <p>You can talk to others in the same room you're in by 
+    starting any command with <b>"</b> or <b>'</b>, for example <b>"hello</b>. </p>
+    <h2>Looking Around</h2>
+    <p>You can get a description of where you are with <b>look</b> or <b>l</b>.
+    To get a closer look at something, you can use <b>examine (something)</b> or <b>x (something)</b>. 
+    For example <b>x apple</b> to look at an apple.</p>
+    <h2>Other Commands</h2>
+    <p>Here are some other commands you might try:</p>
+    <ul>
+      <li><b>go (direction)</b> to travel from your current location.
+      <li><b>take (something)</b> to pick something up.
+      <li><b>inventory</b> or <b>i</b> to see what you're holding.
+      <li><b>drop (something)</b> to get rid of something you're holding.
+    </ul>
+  ]],
+  function(topic)
+    print(topic, topic.name)
+    return topic.template({topic = topic})
   end
 }
 

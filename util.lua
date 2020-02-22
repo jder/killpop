@@ -258,4 +258,8 @@ function util.tostring_all(...)
   return table.unpack(result, 1, select("#", ...))
 end
 
+function util.title(t)
+  return string.gsub(string.gsub(string.lower(t), "^%g", string.upper), "%f[%g]%g", string.upper)
+end
+
 return util

@@ -6,7 +6,8 @@
   Other files in this repo are used with e.g. `require "system.object"`
 ]]
 
-local util = require "system.util"
+-- make util global, mostly for templates.
+util = require "system.util"
 
 function main(name, payload)
   local kind = orisa.get_kind(orisa.self)
@@ -17,13 +18,13 @@ function main(name, payload)
     if top ~= "system" then
       local fallback = "system.object"
       -- some non-system package failed to load; fallback to an appropriate system package
-      print(kind, "failed to load; defaulting to system.object", result)
       if package_name == "user" then
         -- for users, we fall back to system user so they can do anything
         -- since users are initially created before they have a package
         -- TODO: would be nice to make sure the user themselves sees this
         fallback = "system.user"
       end
+      print(kind, "failed to load; defaulting to", fallback, result)
       success, result = pcall(require, fallback)
       if success then
         -- for next time
