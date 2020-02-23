@@ -2,6 +2,7 @@ local help = {}
 
 local util = require "system.util"
 local etlua = require "system.etlua"
+local commands = require "system.commands"
 
 local topics = {}
 
@@ -32,7 +33,7 @@ topic {
     <h1><%= util.title(topic.name) %></h1>
     <h2>Talking</h2>
     <p>You can talk to others in the same room you're in by 
-    starting any command with <b>"</b> or <b>'</b>, for example <b>"hello</b>. </p>
+    starting any command with <b>"</b> or <b>'</b>, for example <b>"Hello!</b></p>
     
     <h2>Looking Around</h2>
     <p>You can get a description of where you are with <b>look</b> or <b>l</b>.
@@ -132,6 +133,10 @@ topic {
     and <b>/help api</b> for a list of all builtin functions.</p>
     <p>Verbs are special messages which can be invoked by the room based on user-entered text
     like <b>go north</b>. See <b>/help verbs</b> for more information.</p>
+    <h2>Containment</h2>
+    <p>Objects form a tree where each has an optional parent. The top-most parent of a given object
+    is known as the "room" that object is in. You can inspect this tree with <b>orisa.get_parent(object)</b>
+    and <b>orisa.get_children(object)</b> and alter it with <b>orisa.move_object(object, new_parent)</b>.
     <h2>State</h2>
     <p>The isolated Lua environments which objects run in are temporary (e.g. are thrown
     away whenever their code is edited or the server is restarted) so any state you would
@@ -180,12 +185,12 @@ topic {
     <p>There is also a button in the UI which reloads the system code (from disk). In the future we'd like to support
     additional github repos for other users to have code e.g. <b><%= username %>/reponame.something</b>.</p>
     <h2>System Utilities</h2>
-    <p>The <a href="https://github.com/jder/killpop/blob/master/utils.lua">system.utils</a> package includes 
+    <p>The <a href="https://github.com/jder/killpop/blob/master/util.lua">system.util</a> package includes 
     helpful utilities for common tasks, including helpers for defining new types, finding objects based
     on text descriptions, querying containment, and string manipulation. We'll probably break this up at some point.</p>
-    <p>Unlike other system packages you must <b>require</b>, this is globally available as <b>utils</b>.</p>
+    <p>Unlike other system packages you must <b>require</b>, this is globally available as <b>util</b>.</p>
     <h2>Logging</h2>
-    <p>The system.utils package also includes a simple logging system. Calling <b>util.logger("foo")</b> returns a
+    <p>The system.util package also includes a simple logging system. Calling <b>util.logger("foo")</b> returns a
     function which acts like <b>print(string.format(...))</b>, except it displays tables more nicely via util.tostring.
     These log messages are by default not shown but can be enabled/disabled with attributes on your user object. 
     A message will appear in your browser console with more instructions when you call code which uses these loggers.</p>
@@ -193,7 +198,7 @@ topic {
     <p>The <a href="https://github.com/jder/killpop/blob/master/etlua.lua">system.etlua</a> package is a fork of 
     <a href="https://github.com/leafo/etlua">etlua</a> which allows simple HTML templating in your code, mainly for
     sending to a user via <b>orisa.send_user_tell_html</b>. Note that our version allows access to the global environment
-    which includes the <b>utils</b> global.
+    which includes the <b>util</b> global.
   ]],
   function(topic)
     return topic.template({topic = topic, username = orisa.get_username(orisa.original_user)})
@@ -203,50 +208,134 @@ topic {
 topic {
   name = "verbs", 
   summary = "How verbs and command-parsing work.",
-  function()
-    -- things usually trust the room they're in & rooms usually define common verbs
-    return "util.verb, objects, patterns, etc"
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    <p>Verbs are messages which have special metadata allowing the command-parser to call them based on user-entered text.
+    This parsing and dispatch is done by rooms, and many of the common verbs are also defined on rooms. This is helpful
+    because it reduces ambiguity and the room you're in is somewhat trusted by objects in it and so defines the basic
+    rules for this space.</p>
+    <h2>Defining New Verbs</h2>
+    <p>You can define new verbs on your object or room by editing its code (see <b>/help building</b>) and using 
+    <b>util.verb</b> to create a new verb. This function takes a table which contains 2 values:</p>
+    <ul>
+      <li>At index [1]: A string (or list of strings) giving the patterns that the verb matches, like <b>eat $this</b>.
+      <li>At index [2]: A function to call to run the behavior of this verb.
+    </ul>
+    <p>The result of <b>util.verb</b> must be assigned to a function in your object's package, so it is invoked when
+      your object receives this message. For example:</p>
+    <b>my_kind.eat = util.verb { "eat $this", function(payload) ... end }</b>
+    <h2>Patterns</h2>
+    <p>The general form of the verb pattern is a sequence of space-separated pieces:</p>
+    <ul>
+      <li>the verb itself, with options separated by <b>|</b> (a vertical bar). Required.
+      <li>the direct object specifier, which may be absent or <b>$this</b> or <b>$any</b>. 
+      <li>the preposition specifier, with options separated by <b>|</b> (a vertical bar). Required if there is an indirect object specifier.
+        Only these prepositions are supported: <%= table.concat(prepositions, ", ") %>.
+      <li>the indirect object specifier, which may be absent or <b>$this</b> or <b>$any</b>. 
+    </ul>
+    <p>For example: <b>give|hand $this to $any</b> or <b>jump on $this</b></p>
+    <p>If you use <b>$this</b> that means the user must specify something which refers to the object which the verb is defined on.
+    <b>$any</b> matches text referring to any object.</p>
+    <h2>Payload & Disambiguation</h2>
+    <p>When your verb pattern is matched by user text, the message sent has a payload with the following keys:</p>
+    <ul>
+      <li><b>user</b> -- the user which is acting
+      <li><b>room</b> -- the room the user is in
+      <li><b>command</b> -- the parsed command, with keys:
+      <ul>
+        <li><b>verb</b> -- the string matching the verb (i.e. one of the options from your patterns)
+        <li><b>direct_object</b> -- nil or a table with:
+          <ul><li><b>found</b> is a possibly-empty list of matching objects
+              <li><b>text</b> is the matched text with single-spaced words
+          </ul>
+        <li><b>preposition</b> from the above list as a string
+        <li><b>indirect_object</b> is nil or a table just like <b>direct_object</b>
+      </ul>
+    </ul>
+    <p>Note that the <b>direct_object</b> and <b>indirect_object</b> could include multiple options and it is up to your verb
+    to pick one or give an error. There is a helper function in <b>system.commands</b> called <b>disambig_object</b> which can 
+    help here. Take a look at <a href="https://github.com/jder/killpop/blob/master/room.lua">system.room</a> for examples.</p>
+    <p>You typically end by using the <b>tell</b> to the user or <b>tell_action</b> to the room. (See <b>/help messages</b> for more.)</p>
+  ]],
+  function(topic)
+    local preps = {}
+    for k, _ in pairs(commands.prepositions) do
+      table.insert(preps, k)
+    end
+    table.sort(preps)
+    return topic.template({topic = topic, prepositions = preps})
   end
 }
 
 topic { 
   name = "api", 
   summary = "Reference docs for orisa built-in functions.",
-  function()
-    return "auto-generated docs here"
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    I'd like to have auto-generated docs here. In the meantime you can look at
+    <a href="https://github.com/jder/orisa/blob/ec9f8da2a53ad1e1ea5b321a256c620b8e21717a/server/src/object/api.rs#L385">api.rs</a>
+    which registers all the built-in functions.
+  ]],
+  function(topic)
+    return topic.template({topic = topic})
   end
 }
 
 topic { 
   name = "messages", 
   summary = "Reference for the standard messages between objects.",
-  function()
-    return "auto-generated docs here + sub-topics for each e.g. created"
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    I'd like to have auto-generated docs here + sub-topics for each, which are type-checked 
+    in main.lua when a message is received. In the meantime, here are some of the most important messages:
+    <ul>
+      <li><b>tell</b> with a payload of <b>{message = (some string)}</b> is sent to user objects to display text to the user.
+      <li><b>tell_html</b> with a payload of <b>{html = (some string)}</b> is sent from rooms only to users to display HTML messages.
+      <li><b>tell_action</b> with a payload of <b>{user = (some user), me = (some string), others = (some string)}</b> sent to 
+      rooms to inform everyone in that room that the given user has taken some action (with the "others" text) and sent to the user
+      themselves to inform them of their action (with the "me" text).
+      <li><b>created</b> is a message sent to each object when it is first created to do initialization. The payload is passed 
+      along from the <b>orisa.create_object</b> call. Take a look at <a href="https://github.com/jder/killpop/blob/master/user.lua">system.user</a>'s 
+      <b>do_create</b> function for an example and <a href="https://github.com/jder/killpop/blob/master/object.lua">system.object</a> for handling
+      of it. That handling also supports allows sub-kinds to do their own initialization. See <a href="https://github.com/jder/killpop/blob/master/door.lua">system.door</a>
+        for an example.
+      <li><b>command</b> with a payload of <b>{message = (some string)}</b> triggers the room's verb parsing and acting. (See <b>/help verbs</b> for more.)
+      <li><b>say</b> with a payload of <b>{message = (some string)}</b> sent to a room is how you speak in that room.
+  ]],
+  function(topic)
+    return topic.template({topic = topic})
   end
 }
 
 topic { 
   name = "attrs", 
   summary = "Standard attributes and how they are used.",
-  function()
-    return "name, ~kind, aliases, owner, etc"
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    <p>Common attrs:</p>
+    <ul>
+      <li><b>name</b> -- displayed as the name of an object in look/examine descriptions. Also can be used to refer to this object in commands.
+      <li><b>aliases</b> -- a list of additional strings that can be used to refer to this object in commands.
+      <li><b>description</b> -- shown in response to <b>examine</b>
+      <li><b>owner</b> -- set by <b>system.object</b> at creation time to a privileged object who can set attributes with the <b>set</b> message.
+      <li><b>hidden</b> -- boolean attribute; if true, this object is not mentioned in <b>look</b>.
+      <li><b>log_$name</b> -- boolean set on users to turn on/off log messages for the logger with name <b>$name</b>. 
+    </ul>
+    <p>Kind is not an attr (maybe it should be), but you can <b>orisa.get_kind(object)</b> to find out its kind.</p>
+    <p>Similarly, the username of a given user is not an attr, but you can <b>orisa.get_username(object)</b>. (Though typically you'd just use <b>util.get_name</b>.)</p>
+    <p>See <b>/help building</b> and <b>/help objects</b> for how to get and set attrs.</p>
+  ]],
+  function(topic)
+    return topic.template({topic = topic})
   end
 }
 
--- topic { 
---   name = "concurrency", 
---   summary = "Details of message-sending, visibility, isolation.",
---   function()
---     return "single-threaded today, separate lua VMs per kind but might change to per user; snapshot isolation but could have write-skew someday"
---   end
--- }
-
--- topic { 
---   name = "contrib", 
---   summary = "How to help with Orisa.",
---   function()
---     return "links to github, todo/idea lists, etc"
---   end
--- }
+topic { 
+  name = "concurrency", 
+  summary = "Details of message-sending, visibility, isolation.",
+  function()
+    return "TODO. Single-threaded today, separate lua VMs per kind but might change to per user or shard further by object id. We'll ensure consistent read snapshots but could have write-skew someday when we multithread."
+  end
+}
 
 return help

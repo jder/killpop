@@ -2,7 +2,7 @@ local commands = {}
 
 local util = require "system.util"
 
-local prepositions = {
+commands.prepositions = {
   with = true, 
   at = true, 
   to = true, 
@@ -13,7 +13,7 @@ local prepositions = {
 
 local log = util.logger("commands")
 
---- Breaks text into the following pieces based on the lambdamoo parsing structure.
+--- Parses text into the following pieces based on the lambdamoo parsing structure.
 --- (Any of these could be missing. A missing verb means the text was empty.)
 --- * verb
 --- * direct_object a nil or a table with {found = {...}, text = "..."}
@@ -29,7 +29,7 @@ function commands.parse_user(text)
   local indirect_object_text = nil
   for w in string.gmatch(string.lower(text), "%g+") do
     table.insert(words, w)
-    if prepositions[w] and preposition_index == nil then
+    if commands.prepositions[w] and preposition_index == nil then
       preposition_index = #words
     end
   end
@@ -67,14 +67,7 @@ function commands.parse_user(text)
 end
 
 --- Parses a textual pattern for a verb to be matched against a user command
---- The general form of the verb pattern is a sequence of space separated pieces:
---- * the verb itself, with options separated by |. Required.
---- * the direct object specifier, which may be absent or $this or $any. (TODO: maybe types or requiring single-matches in the future)
---- * the preposition specifier, with options separated by |. Required if there is an indirect object specifier.
---- * the indirect object specifier, which may be absent or $this or $any. 
---- For example:
---- give|hand $this to $any
---- jump on $this
+--- (see /help verbs for details; TODO: unify these)
 function commands.parse_matcher(text)
   -- todo: memoize
   log("Parsing matcher %q", text)
@@ -90,6 +83,7 @@ function commands.parse_matcher(text)
         verb_options[v] = true
       end
     else
+      -- TODO: maybe type-based matching or similar?
       if w == "$this" or w == "$any" then
         if preposition_options == nil then
           assert(direct_type == nil, string.format("set direct_type twice; was %s now %s in %s", direct_type, w, text))
@@ -104,7 +98,7 @@ function commands.parse_matcher(text)
         pieces = util.split_punct(w, "|")
         preposition_options = {}
         for _, p in ipairs(pieces) do
-          assert(prepositions[p], string.format("%s is not a known preposition in %s", p, text))
+          assert(commands.prepositions[p], string.format("%s is not a known preposition in %s", p, text))
           preposition_options[p] = true
         end
       end
@@ -179,12 +173,12 @@ end
 --- In the future we can pass more options here to help pick smartly,
 --- have match scores, etc
 --- Options:
---- * prefer = function which takes (object, verb_payload, object_info) and 
+--- * prefer = function which takes (object, command_payload, object_info) and 
 ---   returns either (false) or (true, message) 
 ---   indicating which objects are preferred. If exactly one of the >1 options
 ---   returns true, we use it and show the user the message, if any. 
 ---   See commands.prefer_* for common ones.
-function commands.disambig_object(verb_payload, object_info, options)
+function commands.disambig_object(command_payload, object_info, options)
   options = options or {}
   if not object_info then
     return nil, "Expected some object."
@@ -194,7 +188,7 @@ function commands.disambig_object(verb_payload, object_info, options)
     local prefer = options.prefer or commands.prefer_holding -- by default we prefer holding
     local preferred = {} -- list of (object, message)
     for _, match in ipairs(object_info.found) do
-      local is_preferred, message = prefer(match, verb_payload, object_info)
+      local is_preferred, message = prefer(match, command_payload, object_info)
       if is_preferred then
         table.insert(preferred, {match, message})
       end
@@ -215,19 +209,19 @@ function commands.disambig_object(verb_payload, object_info, options)
   end
 end
 
-function commands.prefer_holding(object, verb_payload, object_info)
-  if util.is_inside(object, verb_payload.user) then
+function commands.prefer_holding(object, command_payload, object_info)
+  if util.is_inside(object, command_payload.user) then
     return true, string.format("(Assuming the %s you are holding.)", object_info.text)
   end
   return false
 end
 
-function commands.prefer_nearby(object, verb_payload, object_info)
-  if util.is_inside(object, verb_payload.user) then
+function commands.prefer_nearby(object, command_payload, object_info)
+  if util.is_inside(object, command_payload.user) then
     return false
   end
 
-  if util.is_inside(object, util.current_room(verb_payload.user)) then
+  if util.is_inside(object, util.current_room(command_payload.user)) then
     return true, string.format("(Assuming the %s nearby.)", object_info.text)
   end
 
