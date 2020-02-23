@@ -79,8 +79,9 @@ topic {
     For example:
     <ul>
       <li><b>/create apple</b> -- creates a new object of type <b><%= username %>/live.apple</b>. 
-      <li><b>/edit apple</b> -- brings up a code editor for all objects of type <b><%= username %>/live.apple</b>.
+      <li><b>/edit <%= username%>/live.apple</b> or <b>/edit apple</b> -- brings up a code editor for all objects of type <b><%= username %>/live.apple</b>.
       Click "save" to cause your edits to become live. See <b>/help objects</b> and <b>/help code</b> for more information.
+      <li><b>/edit system.room</b> -- shows default code for rooms. You can't save code for system or other user's kinds but you can view it.
       <li><b>/dig north</b> -- creates a new <b>system.door</b> named "north" leading to a new
              <b>system.room</b>. This lets you then <b>go north</b>. You can also <b>/dig north #123</b>
               to connect to an existing room #123. 
@@ -179,7 +180,7 @@ topic {
   template = etlua.compile [[
     <h1><%= util.title(topic.name) %></h1>
     <h2>Editing Code</h2>
-    <p>You can use the <b>/edit</b> command to edit (or view) code for non-system objects. See <b>/help building</b> for more.</p>
+    <p>You can use the <b>/edit</b> command to edit (or view) code for any object. See <b>/help building</b> for more.</p>
     <p>You should have your browser's Javascript console visible while doing this, as compile errors, runtime errors, 
     and output from the Lua <b>print</b> function will appear there.</p>
     <p>There is also a button in the UI which reloads the system code (from disk). In the future we'd like to support

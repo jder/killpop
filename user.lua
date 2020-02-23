@@ -109,7 +109,7 @@ end
 
 local function run_edit(kind)
   kind = expand_kind(kind)
-  local current = orisa.get_live_package_content(kind)
+  local current = orisa.get_package_content(kind)
   if current == nil then
     local top, package = util.split_kind(kind)
     local fallback = "system.object"
@@ -282,7 +282,7 @@ function user.disconnected(payload)
 end
 
 function user.save_file(payload)
-  orisa.send_save_live_package_content(payload.name, payload.content)
+  orisa.send_save_package_content(payload.name, payload.content)
 end
 
 function user.pong(payload)
