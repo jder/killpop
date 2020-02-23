@@ -51,7 +51,7 @@ topic {
       <li><b>go (direction)</b> to travel from your current location.
       <li><b>take (something)</b> to pick something up.
       <li><b>inventory</b> or <b>i</b> to see what you're holding.
-      <li><b>drop (something)</b> to get rid of something you're holding.
+      <li><b>drop (something)</b> to drop something you're holding in the room you're in.
     </ul>
   ]],
   function(topic)
@@ -80,7 +80,8 @@ topic {
     <ul>
       <li><b>/create apple</b> -- creates a new object of type <b><%= username %>/live.apple</b>. 
       <li><b>/edit <%= username%>/live.apple</b> or <b>/edit apple</b> -- brings up a code editor for all objects of type <b><%= username %>/live.apple</b>.
-      Click "save" to cause your edits to become live. See <b>/help objects</b> and <b>/help code</b> for more information.
+      Click "save" to cause your edits to become live. (For now you have to try running that code before you will see errors.)
+      See <b>/help objects</b> and <b>/help code</b> for more information.
       <li><b>/edit system.room</b> -- shows default code for rooms. You can't save code for system or other user's kinds but you can view it.
       <li><b>/dig north</b> -- creates a new <b>system.door</b> named "north" leading to a new
              <b>system.room</b>. This lets you then <b>go north</b>. You can also <b>/dig north #123</b>
@@ -183,6 +184,9 @@ topic {
     <p>You can use the <b>/edit</b> command to edit (or view) code for any object. See <b>/help building</b> for more.</p>
     <p>You should have your browser's Javascript console visible while doing this, as compile errors, runtime errors, 
     and output from the Lua <b>print</b> function will appear there.</p>
+    <p>Lua's standard <b>require</b> function acts slightly differently, allowing loading pre-packaged code from 
+      <a href="https://github.com/jder/killpop/">the system repo</a> with names like <b>system.apple</b> and code from
+      users, edited live in the UI with names like <b><%= username %>/live.apple</b>. 
     <p>There is also a button in the UI which reloads the system code (from disk). In the future we'd like to support
     additional github repos for other users to have code e.g. <b><%= username %>/reponame.something</b>.</p>
     <h2>System Utilities</h2>
@@ -300,8 +304,11 @@ topic {
       <b>do_create</b> function for an example and <a href="https://github.com/jder/killpop/blob/master/object.lua">system.object</a> for handling
       of it. That handling also supports allows sub-kinds to do their own initialization. See <a href="https://github.com/jder/killpop/blob/master/door.lua">system.door</a>
         for an example.
-      <li><b>command</b> with a payload of <b>{message = (some string)}</b> triggers the room's verb parsing and acting. (See <b>/help verbs</b> for more.)
+      <li><b>command</b> with a payload of <b>{message = (some string)}</b> is sent to the user object when the user types text in the UI. The user object
+      (if it doens't handle the command) sends it to the room to trigger verb parsing and acting. (See <b>/help verbs</b> for more.)
       <li><b>say</b> with a payload of <b>{message = (some string)}</b> sent to a room is how you speak in that room.
+      <li><b>parent_changed</b> and <b>child_added</b> which are sent after a successful move with payload keys of <b>child</b> and <b>new_parent</b>.
+      <li><b>connected</b> and <b>disconnected</b> are sent to your user object when your chat connection connects and disconnects</b>.
   ]],
   function(topic)
     return topic.template({topic = topic})
