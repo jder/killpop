@@ -65,7 +65,8 @@ topic {
   template = etlua.compile [[
     <h1><%= util.title(topic.name) %></h1>
     <p>In addition to "in game" verbs like <b>take</b> or <b>go</b>, there are also 
-    a set of "out of game" commands which let you build new objects in the world.</p>
+    a set of "out of game" commands which let you build new objects in the world. 
+    These are implemented in <a href="https://github.com/jder/killpop/blob/master/user.lua">system.user</a>.</p>
     <h2>Kinds</h2>
     <p>Every object has a kind, represented as a string like <b>system.object</b>.
     This corresponds to the name of a lua package whose code implements the behavior
@@ -78,10 +79,11 @@ topic {
     <ul>
       <li><b>/create apple</b> -- creates a new object of type <b><%= username %>/live.apple</b>. 
       <li><b>/edit apple</b> -- brings up a code editor for all objects of type <b><%= username %>/live.apple</b>.
-            See <b>/help objects</b> and <b>/help code</b>.
+      Click "save" to cause your edits to become live. See <b>/help objects</b> and <b>/help code</b> for more information.
       <li><b>/dig north</b> -- creates a new <b>system.door</b> named "north" leading to a new
              <b>system.room</b>. This lets you then <b>go north</b>. You can also <b>/dig north #123</b>
               to connect to an existing room #123. 
+      <li><b>/x apple</b> -- get details of the apple, including its kind and number.
     </ul>
     <h2>Parents</h2>
     <p>Objects form a tree of containment where each object has a parent. For example, your parent
@@ -97,12 +99,8 @@ topic {
     <ul>
       <li><b>/get here name</b> -- shows the name of the room you are in.
       <li><b>/set me description "Suave and sophisticated"</b> -- set a new description for yourself.
-      The "value" there is a Lua expression (see the next section.)
+      The "value" there is a Lua expression. (See <b>/help code</b> for helpful tips about Lua code in Orisa.)
     </ul>
-    <h2>Running Code</h2>
-    <p>You can use <b>/eval 1 + 2</b> or the shortcut <b>`1 + 2</b> (backtick) to evaluate a Lua
-    expression. There is also <b>/run</b> which allows multiple statements separated by semicolons
-    but requires you to <b>return</b> the final result, if any.</p>
   ]],
   function(topic)
     return topic.template({topic = topic, username = orisa.get_username(orisa.original_user)})
@@ -111,17 +109,94 @@ topic {
 
 topic { 
   name = "objects",
-  summary = "The object and state model for Lua.",
-  function()
-    return "orisa.send, orisa.query, attrs, state, inheritance + privacy"
+  summary = "The object, state and permission model for Lua.",
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    <h2>Message Sending</h2>
+    <p>Objects are isolated Lua environments (per kind) which primarily communicate by
+    sending messages or accessing attributes of other objects. You can send a message
+    to another object with e.g. <b>orisa.send("#123", "hello", {foo = "bar"})</b> which
+    sends the "hello" message to object #123 and passes it a Lua table, commonly called
+    the "payload". See <b>/help messages</b> for commonly-used messages.</p>
+    <p>The currently-running object is called <b>orisa.self</b>.</p>
+    <h2>Message Handling & Kinds</h2>
+    <p>When an object is sent a message, we load <a href="https://github.com/jder/killpop/blob/master/main.lua">system.main</a>
+    to handle that message. It <b>require</b>s a Lua package named the same as the object's
+    kind and calls the <b>handler</b> function in that package. These packages are typically 
+    created with <a href="https://github.com/jder/killpop/blob/master/util.lua">system.util</a>'s
+    <b>kind</b> function which installs a standard handler function that looks for a function
+    of the same name of the message and calls it.</p>
+    <p>For example, try creating an object and editing its code to see the auto-generated 
+    code which does this and sets up an example message handler. 
+    See <b>/help code</b> for more about how to write the bodies of these functions 
+    and <b>/help api</b> for a list of all builtin functions.</p>
+    <p>Verbs are special messages which can be invoked by the room based on user-entered text
+    like <b>go north</b>. See <b>/help verbs</b> for more information.</p>
+    <h2>State</h2>
+    <p>The isolated Lua environments which objects run in are temporary (e.g. are thrown
+    away whenever their code is edited or the server is restarted) so any state you would
+    like to persist between messages needs to either be stored in <b>attrs</b> or in <b>state</b>. The only 
+    difference is that <b>attrs</b> are visible to all other objects and <b>state</b> is not.
+    You can store any JSON-like Lua structure in these (tables, numbers & strings).</p>
+    <p>These are read/written with <b>orisa.get_attr(object, key)</b> and <b>orisa.set_attr(object, key, value)</b>,
+    and analagous methods for state. These only work on <b>orisa.self</b> except for <b>orisa.get_attr</b>
+    which allows you to read the attributes of any object.</p>
+    <h2>Queries</h2>
+    <p>You can send special messages via <b>orisa.query</b> which has the same form as <b>orisa.send</b>
+    with these behavior differences:</p>
+    <ul>
+      <li> Messages are handled immediately (as opposed to asynchronously) and can return a result.
+      <li> While handling a query message, you cannot cause side effects, such as setting state or sending messages.
+    </ul>
+    <p>This is useful for "computed properties" which are side-effect free.</p> 
+    <h2>Permissions</h2>
+    <p>Most fundamental operations are either unrestricted (e.g. sending messages, reading attrs) or restricted 
+    to the object itself (e.g. setting attrs/state, sending text to the user). There are a few exceptions:
+    <ul>
+      <li><b>orisa.move_object</b> is permitted when the target and current object are in the same room.
+      <li><b>system.object</b> supports a <b>set</b> messages from its owner (i.e. creator)
+      to set its attributes. This is how the <b>/set</b> command works. (See <b>/help building</b>.)
+      <li><b>system.user</b> forwards <b>tell</b> and <b>tell_html</b> messages to the orisa.send_user_* messages
+      to display text to the user; the latter is only permitted for messages from the current room.
+    </ul>
+    <p>Ultimately we'd like to change this to a capabilities model which are passed along during message sends
+    and checked via queries, with errors automatically captured & reported to the user.</p>
+  ]],
+  function(topic)
+    return topic.template({topic = topic})
   end
 }
 
 topic { 
-  name = "libs", 
-  summary = "Utilities available to Lua code.",
-  function()
-    return "require & packages, util.*, etlua, logging, browser console"
+  name = "code", 
+  summary = "Tips & utilities for Lua code.",
+  summary = "The object and state model for Lua.",
+  template = etlua.compile [[
+    <h1><%= util.title(topic.name) %></h1>
+    <h2>Editing Code</h2>
+    <p>You can use the <b>/edit</b> command to edit (or view) code for non-system objects. See <b>/help building</b> for more.</p>
+    <p>You should have your browser's Javascript console visible while doing this, as compile errors, runtime errors, 
+    and output from the Lua <b>print</b> function will appear there.</p>
+    <p>There is also a button in the UI which reloads the system code (from disk). In the future we'd like to support
+    additional github repos for other users to have code e.g. <b><%= username %>/reponame.something</b>.</p>
+    <h2>System Utilities</h2>
+    <p>The <a href="https://github.com/jder/killpop/blob/master/utils.lua">system.utils</a> package includes 
+    helpful utilities for common tasks, including helpers for defining new types, finding objects based
+    on text descriptions, querying containment, and string manipulation. We'll probably break this up at some point.</p>
+    <p>Unlike other system packages you must <b>require</b>, this is globally available as <b>utils</b>.</p>
+    <h2>Logging</h2>
+    <p>The system.utils package also includes a simple logging system. Calling <b>util.logger("foo")</b> returns a
+    function which acts like <b>print(string.format(...))</b>, except it displays tables more nicely via util.tostring.
+    These log messages are by default not shown but can be enabled/disabled with attributes on your user object. 
+    A message will appear in your browser console with more instructions when you call code which uses these loggers.</p>
+    <h2>Templating</h2>
+    <p>The <a href="https://github.com/jder/killpop/blob/master/etlua.lua">system.etlua</a> package is a fork of 
+    <a href="https://github.com/leafo/etlua">etlua</a> which allows simple HTML templating in your code, mainly for
+    sending to a user via <b>orisa.send_user_tell_html</b>. Note that our version allows access to the global environment
+    which includes the <b>utils</b> global.
+  ]],
+  function(topic)
+    return topic.template({topic = topic, username = orisa.get_username(orisa.original_user)})
   end
 }
 
@@ -158,20 +233,20 @@ topic {
   end
 }
 
-topic { 
-  name = "concurrency", 
-  summary = "Details of message-sending, visibility, isolation.",
-  function()
-    return "asyncness, separate lua VMs, snapshot isolation but could have write-skew someday"
-  end
-}
+-- topic { 
+--   name = "concurrency", 
+--   summary = "Details of message-sending, visibility, isolation.",
+--   function()
+--     return "single-threaded today, separate lua VMs per kind but might change to per user; snapshot isolation but could have write-skew someday"
+--   end
+-- }
 
-topic { 
-  name = "contrib", 
-  summary = "How to help with Orisa.",
-  function()
-    return "links to github, todo/idea lists, etc"
-  end
-}
+-- topic { 
+--   name = "contrib", 
+--   summary = "How to help with Orisa.",
+--   function()
+--     return "links to github, todo/idea lists, etc"
+--   end
+-- }
 
 return help
