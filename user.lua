@@ -273,7 +273,7 @@ function user.connected(payload)
   if history then
     orisa.send_user_backlog(history)
   end
-  orisa.send_user_tell("Welcome! Run /help for a quick tutorial.")
+  orisa.send_user_tell("Welcome! Run /help to see available help.")
   orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
 end
 
