@@ -226,6 +226,11 @@ topic {
       <li>At index [1]: A string (or list of strings) giving the patterns that the verb matches, like <b>eat $this</b>.
       <li>At index [2]: A function to call to run the behavior of this verb.
     </ul>
+    <p>There are other (named) properties you can set on this to control the verb behavior:</p>
+    <ul>
+        <li><b>priority</b> -- to give hints about how likely it is someone means to use this verb when there are other matching verbs. 
+        Can be one of the constants in <b>util.priority.*</b>. By default verbs are <b>util.priority.normal</b>.
+    </ul>
     <p>The result of <b>util.verb</b> must be assigned to a function in your object's package, so it is invoked when
       your object receives this message. For example:</p>
     <b>my_kind.eat = util.verb { "eat $this", function(payload) ... end }</b>
