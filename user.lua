@@ -214,6 +214,28 @@ local function run_dig(direction, destination_query)
   orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
 end
 
+local function run_dig_reciprocal(direction, reciprocal_direction, destination_query)
+  local parent = orisa.get_parent(orisa.self)
+  if parent == nil then
+    orisa.send_user_tell("You aren't anywhere.")
+    return
+  end
+
+  local destination = nil
+  if destination_query ~= nil then
+    destination = util.find(destination_query)
+    if destination == nil then
+      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
+      return
+    end
+  else
+    destination = orisa.create_object(nil, "system.room", {owner = orisa.self})
+  end
+  
+  orisa.create_object(parent, "system.door", {owner = orisa.self, direction = direction, destination = destination})
+  orisa.create_object(destination, "system.door", {owner = orisa.self, direction = reciprocal_direction, destination = parent})
+end
+
 function user.command(payload)
   assert(orisa.sender == orisa.self, "refusing to run command from someone other than ourselves") -- only run commands from the user
   local patterns = {
@@ -232,6 +254,8 @@ function user.command(payload)
     ["^/banish +(%g+)$"] = run_banish,
     ["^/b +(%g+)$"] = run_banish,
     ["^/create +(%g+)$"] = run_create,
+    ["^/dig +(%g+)|(%g+)$"] = run_dig_reciprocal,
+    ["^/dig +(%g+)|(%g+) +(.+)"] = run_dig_reciprocal,
     ["^/dig +(%g+)$"] = run_dig,
     ["^/dig +(%g+) +(.+)"] = run_dig,
     ["^/help *$"] = run_help_top,
