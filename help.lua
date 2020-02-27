@@ -202,8 +202,8 @@ topic {
     <h2>Templating</h2>
     <p>The <a href="https://github.com/jder/killpop/blob/master/etlua.lua">system.etlua</a> package is a fork of 
     <a href="https://github.com/leafo/etlua">etlua</a> which allows simple HTML templating in your code, mainly for
-    sending to a user via <b>orisa.send_user_tell_html</b>. Note that our version allows access to the global environment
-    which includes the <b>util</b> global.
+    sending to a user via <b>orisa.send_user_tell_html</b> (typically via sending a "tell_html" message to the user).
+    Note that our version allows access to the global environment which includes the <b>util</b> global.
   ]],
   function(topic)
     return topic.template({topic = topic, username = orisa.get_username(orisa.original_user)})

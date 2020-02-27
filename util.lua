@@ -86,7 +86,7 @@ function util.parse(text, patterns)
           handler = handler.handler
         end
         if echo then
-          orisa.send_user_tell_html(echo_template({text = text}))
+          orisa.send(orisa.self, "tell_html", {html = echo_template({text = text})})
         end
         handler(table.unpack(captures))
         return

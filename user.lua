@@ -22,9 +22,29 @@ return $PACKAGE
 ]]
 
 local echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
+local plain_template = etlua.compile [[<div class="text"><%= text %></div>]]
+
+local function tell_html_with_history(html)
+  orisa.send_user_tell_html(html)
+  local history = orisa.get_state(orisa.self, "history")
+  if not history then
+    history = {}
+  end
+  table.insert(history, html)
+  -- truncate history to latest 50% of rows once hits capacity
+  local max_history = 100
+  if #history > max_history then
+    history = table.move(history, max_history/2, #history, 1, {})
+  end
+  orisa.set_state(orisa.self, "history", history)
+end
+
+local function text_reply(text)
+  tell_html_with_history(plain_template({text = text}))
+end
 
 local function run_fallback(text)
-  orisa.send_user_tell("Unknown command " .. text)
+  text_reply("Unknown command " .. text)
 end
 
 local function run_command(text)
@@ -38,13 +58,13 @@ end
 local function run_run(cmd) 
   local chunk, err = load(cmd, "command", "t")
   if not chunk then
-    orisa.send_user_tell("Compile Error: " .. err)
+    text_reply("Compile Error: " .. err)
   else
     local success, result = pcall(chunk)
     if success then
-      orisa.send_user_tell("Result: " .. tostring(result))
+      text_reply("Result: " .. tostring(result))
     else
-      orisa.send_user_tell("Runtime Error: " .. tostring(result))
+      text_reply("Runtime Error: " .. tostring(result))
     end
   end
 end
@@ -55,9 +75,9 @@ end
 
 local function run_help(topic, rest)
   if help[topic] then
-    orisa.send_user_tell_html(help[topic](rest))
+    tell_html_with_history(help[topic](rest))
   else
-    orisa.send_user_tell(string.format("No help found on %q", topic))
+    user.tell(string.format("No help found on %q", topic))
   end
 end
 
@@ -68,23 +88,23 @@ end
 local function run_examine(query)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
 
   local prefix = util.get_name(target) .. " (" .. target .. ", " .. orisa.get_kind(target) .. ")"
   local description = orisa.get_attr(target, "description")
   if description == nil then
-    orisa.send_user_tell(prefix .. " has no description.")
+    text_reply(prefix .. " has no description.")
   else
-    orisa.send_user_tell(prefix .. ": " .. description)
+    text_reply(prefix .. ": " .. description)
   end
 
   local parent = orisa.get_parent(target)
   if parent then
-    orisa.send_user_tell(string.format("Parent is %s (%s)", util.get_name(parent), parent))
+    text_reply(string.format("Parent is %s (%s)", util.get_name(parent), parent))
   else
-    orisa.send_user_tell("Has no parent.")
+    text_reply("Has no parent.")
   end
 
   local children = orisa.get_children(target)
@@ -95,7 +115,7 @@ local function run_examine(query)
     end
     contents = contents .. util.get_name(child) .. " (" .. child .. ")"
   end
-  orisa.send_user_tell(contents)
+  text_reply(contents)
 end
 
 local function expand_kind(kind)
@@ -126,19 +146,19 @@ end
 local function run_set(query, attr, value)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
 
   local chunk, err = load("return (" .. value .. ")", "value", "t")
   if not chunk then
-    orisa.send_user_tell("Error parsing value: " .. err)
+    text_reply("Error parsing value: " .. err)
     return
   end
 
   local success, result = pcall(chunk)
   if not success then
-    orisa.send_user_tell("Error evaluating value: ".. result)
+    text_reply("Error evaluating value: ".. result)
     return
   end
 
@@ -148,34 +168,34 @@ end
 local function run_get(query, attr)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
 
-  orisa.send_user_tell(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
+  text_reply(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
 end
 
 local function run_ping(query)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
 
-  orisa.send_user_tell("sending ping to " .. util.get_name(target))
+  text_reply("sending ping to " .. util.get_name(target))
   orisa.send(target, "ping")
 end
 
 local function run_move(query, dest_query)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
 
   local dest = util.find(dest_query)
   if dest == nil then 
-    orisa.send_user_tell("I don't see " .. dest_query)
+    text_reply("I don't see " .. dest_query)
     return
   end
 
@@ -185,7 +205,7 @@ end
 local function run_banish(query)
   local target = util.find(query)
   if target == nil then 
-    orisa.send_user_tell("I don't see " .. query)
+    text_reply("I don't see " .. query)
     return
   end
   orisa.send(target, "move", {destination = nil})
@@ -198,7 +218,7 @@ end
 local function run_dig(direction, destination_query)
   local parent = orisa.get_parent(orisa.self)
   if parent == nil then
-    orisa.send_user_tell("You aren't anywhere.")
+    text_reply("You aren't anywhere.")
     return
   end
   
@@ -206,7 +226,7 @@ local function run_dig(direction, destination_query)
   if destination_query ~= nil then
     destination = util.find(destination_query)
     if destination == nil then
-      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
+      text_reply("I don't see " .. destination_query .. " anywhere.")
       return
     end
   end
@@ -217,7 +237,7 @@ end
 local function run_dig_reciprocal(direction, reciprocal_direction, destination_query)
   local parent = orisa.get_parent(orisa.self)
   if parent == nil then
-    orisa.send_user_tell("You aren't anywhere.")
+    text_reply("You aren't anywhere.")
     return
   end
 
@@ -225,7 +245,7 @@ local function run_dig_reciprocal(direction, reciprocal_direction, destination_q
   if destination_query ~= nil then
     destination = util.find(destination_query)
     if destination == nil then
-      orisa.send_user_tell("I don't see " .. destination_query .. " anywhere.")
+      text_reply("I don't see " .. destination_query .. " anywhere.")
       return
     end
   else
@@ -268,36 +288,24 @@ function user.command(payload)
 end
 
 function user.tell(payload)
-  orisa.send_user_tell(payload.message)
-  local history = orisa.get_state(orisa.self, "history")
-  if not history then
-    history = {}
-  end
-  table.insert(history, payload.message)
-  -- truncate history to latest 50% of rows once hits capacity
-  local max_history = 100
-  if #history > max_history then
-    history = table.move(history, max_history/2, #history, 1, {})
-  end
-  orisa.set_state(orisa.self, "history", history)
+  text_reply(payload.message)
 end
 
 function user.tell_html(payload)
-  -- TODO: history or move history to backend
-  if orisa.sender ~= util.current_room(orisa.self) then
-    print("Ignoring html tell from someone other than the room")
+  if orisa.sender ~= util.current_room(orisa.self) and orisa.sender ~= orisa.self then
+    print("Ignoring html tell from someone other than the room or self")
     return
   end
 
-  orisa.send_user_tell_html(payload.html)
+  tell_html_with_history(payload.html)
 end
 
 function user.connected(payload)
   local history = orisa.get_state(orisa.self, "history")
   if history then
-    orisa.send_user_backlog(history)
+    orisa.send_user_backlog_html(history)
   end
-  orisa.send_user_tell("Welcome! Run /help to see available help.")
+  text_reply("Welcome! Run /help to see available help.")
   orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
 end
 
@@ -310,7 +318,7 @@ function user.save_file(payload)
 end
 
 function user.pong(payload)
-  orisa.send_user_tell("got pong from " .. util.get_name(orisa.sender))
+  text_reply("got pong from " .. util.get_name(orisa.sender))
 end
 
 function user.parent_changed(payload)
