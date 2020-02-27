@@ -2,8 +2,6 @@ local util = {}
 
 local etlua = require "system.etlua"
 
-local echo_template = etlua.compile [[<div class="echo"><%= text %></div>]]
-
 --- Create a new kind (module/package) which has a handler for messages
 --- and supports collecting verbs defined with util.verb
 function util.kind(superkind)
@@ -71,31 +69,6 @@ function util.verb(verb)
   end })
 
   return result
-end
-
---- Matches patterns and calls functions with the captures
--- TODO: some actual parsing so we don't reject extra args like `/l foo` as "unknown command /l"
-function util.parse(text, patterns)
-  for pat, handler in pairs(patterns) do
-    if pat ~= "default" then
-      local captures = {string.match(text, pat)}
-      if captures[1] ~= nil then
-        local echo = true
-        if type(handler) == "table" then
-          echo = handler.echo
-          handler = handler.handler
-        end
-        if echo then
-          orisa.send(orisa.self, "tell_html", {html = echo_template({text = text})})
-        end
-        handler(table.unpack(captures))
-        return
-      end
-    end
-  end
-  if patterns.default then
-    patterns.default(text)
-  end
 end
 
 --- Returns a pair of the kind's top-level package and the package name
