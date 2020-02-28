@@ -44,7 +44,7 @@ local function text_reply(text)
 end
 
 local function run_fallback(text)
-  text_reply("Unknown command " .. text)
+  text_reply(string.format("Unknown command: %q", text))
 end
 
 local function run_command(text)
