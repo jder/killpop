@@ -199,8 +199,15 @@ local function run_edit_attr(query, property)
     return
   end
   local current = orisa.get_attr(target, property)
+  local code
+  if current == nil then
+    code = [=[--[[This attr is nil; replace this with lua code such as a number, boolean, or quoted string]]
+nil]=]
+  else
+    code = util.tocode(current)
+  end
   local filename = string.format("%s.%s", target, property)
-  orisa.send_user_edit_file(filename, util.tocode(current))
+  orisa.send_user_edit_file(filename, code)
 end
 
 local function run_save(name, content)
