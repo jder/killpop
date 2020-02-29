@@ -101,15 +101,27 @@ room.look = util.verb {
   function(payload)
     local children = orisa.get_children(orisa.self)
     local contents = {}
+    local user_contents = {}
+    local exits = {}
     for _, child in ipairs(children) do
+      local _, kind = util.split_kind(orisa.get_kind(child))
+
       if not orisa.get_attr(child, "hidden") then
-        table.insert(contents, util.get_name(child))
+        if kind == 'user' then
+          table.insert(user_contents, util.get_name(child))
+        elseif kind == 'door' then
+          table.insert(exits, util.get_name(child))
+        else
+          table.insert(contents, util.get_name(child))
+        end
       end
     end
     orisa.send(payload.user, "tell_html", {html = room.look_template({
       room_name = util.get_name(orisa.self),
       room_description = orisa.get_attr(orisa.self, "description"),
-      children_description = table.concat(contents, ", ")
+      children_description = util.oxford_join(contents, ", ", ", and "),
+      users_description = util.oxford_join(user_contents, ", ", ", and "),
+      exits_description = util.oxford_join(exits, ", ", ", and ")
     })})
   end
 }
@@ -117,7 +129,15 @@ room.look = util.verb {
 room.look_template = etlua.compile [[
 <p><b><%= room_name %></b></p>
 <p><%= room_description or "It's unremarkable" %></p>
-<p>Present: <%= children_description %></p>
+<% if string.len(exits_description) > 0 then %>
+  <p><strong>Exits:</strong> <%= exits_description %></p>
+<% else %>
+  <p>There are no obvious exits.</p>
+<% end %>
+<p><strong>Present:</strong> <%= users_description %></p>
+<% if string.len(children_description) > 0 then %>
+  <p><strong>You see:</strong> <%= children_description %></p>
+<% end %>
 ]]
 
 room.examine = util.verb {

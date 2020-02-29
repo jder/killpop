@@ -81,7 +81,7 @@ end
 --- A quick description of this object
 function util.get_name(object)
   local username = orisa.get_username(object)
-  if username ~= nil then 
+  if username ~= nil then
     return username
   end
 
@@ -253,6 +253,17 @@ function util.is_inside(child, parent)
   end
   
   return util.is_inside(next_child, parent)
+end
+
+function util.oxford_join(list, sep, sep_last)
+  local count = #list
+  if count < 1 then
+    return ""
+  elseif count == 1 then
+    return tostring(list[1])
+  else
+    return table.concat({table.unpack(list, 1, #list - 1)}, sep) .. sep_last .. list[#list]
+  end
 end
 
 return util

@@ -6,7 +6,6 @@ local door = util.kind(super)
 function door.created(payload) 
   if super.created(payload) then
     orisa.set_attr(orisa.self, "name", payload.direction)
-    orisa.set_attr(orisa.self, "hidden", true)
     local destination = payload.destination
     if not destination then
       destination = orisa.create_object(nil, "system.room", {owner = payload.owner})
