@@ -177,6 +177,7 @@ function util.split_punct(string, char)
   return result
 end
 
+-- like tostring but prints contents of k-v tables
 function util.tostring(v)
   local t = type(v)
   if t == "table" then
@@ -188,6 +189,26 @@ function util.tostring(v)
     return "{" .. table.concat(pieces, ", ") .. "}"
   else
     return tostring(v)
+  end
+end
+
+-- Turn the value into a lua code which will produce that value
+function util.tocode(v)
+  local t = type(v)
+  if t == "table" then
+    -- TODO: nicer handling for array-like tables
+    local pieces = {}
+    for k,v in pairs(v) do
+      -- TODO: nicer handling for 'normal' strings
+      table.insert(pieces, string.format("%s = %s", util.tocode(k), util.tocode(v)))
+    end
+    return "{" .. table.concat(pieces, ", ") .. "}"
+  elseif t == "string" then
+    return string.format("%q", v)
+  elseif t == "number" or t == "boolean" or t == "nil" then
+    return tostring(v)
+  else
+    error("Unable to convert value of type ".. t .. " to code")
   end
 end
 
