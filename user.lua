@@ -127,20 +127,27 @@ local function expand_kind(kind)
   return kind
 end
 
-local function run_edit(kind)
-  kind = expand_kind(kind)
-  local current = orisa.get_package_content(kind)
-  if current == nil then
-    local top, package = util.split_kind(kind)
-    local fallback = "system.object"
-    if package == "user" then
-      fallback = "system.user"
+-- evaluate the given string as lua code
+-- forbidding referencing undefined global variables
+-- (prevents the user from typing /set me description cute and getting "nil")
+local function eval_strict(str)
+  function lookup(t, key)
+    local result = _G[key]
+    if result == nil then
+      error("Unable to access nil global variable " .. key)
     end
-    current = edit_template
-    current = string.gsub(current, "$PACKAGE", package)
-    current = string.gsub(current, "$FALLBACK", fallback)
+    return result
   end
-  orisa.send_user_edit_file(kind, current)
+
+  local env = {}
+  setmetatable(env, {__index = lookup})
+
+  local chunk, err = load("return (" .. str .. ")", "value", "t", env)
+  if not chunk then
+    error("Error parsing value: " .. err)
+  end
+
+  return chunk()
 end
 
 local function run_set(query, attr, value)
@@ -150,13 +157,7 @@ local function run_set(query, attr, value)
     return
   end
 
-  local chunk, err = load("return (" .. value .. ")", "value", "t")
-  if not chunk then
-    text_reply("Error parsing value: " .. err)
-    return
-  end
-
-  local success, result = pcall(chunk)
+  local success, result = pcall(eval_strict, value)
   if not success then
     text_reply("Error evaluating value: ".. result)
     return
@@ -172,7 +173,50 @@ local function run_get(query, attr)
     return
   end
 
-  text_reply(string.format("%s.%s is %s", util.get_name(target), attr, orisa.get_attr(target, attr)))
+  text_reply(string.format("%s.%s is %s", util.get_name(target), attr, util.tocode(orisa.get_attr(target, attr))))
+end
+
+local function run_edit_code(kind)
+  kind = expand_kind(kind)
+  local current = orisa.get_package_content(kind)
+  if current == nil then
+    local top, package = util.split_kind(kind)
+    local fallback = "system.object"
+    if package == "user" then
+      fallback = "system.user"
+    end
+    current = edit_template
+    current = string.gsub(current, "$PACKAGE", package)
+    current = string.gsub(current, "$FALLBACK", fallback)
+  end
+  orisa.send_user_edit_file(kind, current)
+end
+
+local function run_edit_attr(query, property)
+  local target = util.find(query)
+  if target == nil then 
+    text_reply("I don't see " .. query)
+    return
+  end
+  local current = orisa.get_attr(target, property)
+  local code
+  if current == nil then
+    code = [=[--[[This attr is nil; replace this with lua code such as a number, boolean, or quoted string]]
+nil]=]
+  else
+    code = util.tocode(current)
+  end
+  local filename = string.format("%s.%s", target, property)
+  orisa.send_user_edit_file(filename, code)
+end
+
+local function run_save(name, content)
+  local object, attr = string.match(name, "^(#[0-9]+).(%g+)$")
+  if object then
+    run_set(object, attr, content)
+  else
+    orisa.send_save_package_content(name, content)
+  end
 end
 
 local function run_ping(query)
@@ -292,7 +336,8 @@ function user.command(payload)
     ["^/eval (.*)"] = run_eval,
     ["^/examine *(.*)"] = run_examine,
     ["^/x *(.*)"] = run_examine,
-    ["^/edit +(%g+)$"] = run_edit,
+    ["^/edit +(%g+)$"] = run_edit_code,
+    ["^/edit +(%g+) +(%g+)$"] = run_edit_attr,
     ["^/set +(%g+) +(%g+) +(.+)"] = run_set,
     ["^/get +(%g+) +(%g+)$"] = run_get,
     ["^/ping +(%g+)$"] = run_ping,
@@ -340,7 +385,7 @@ function user.disconnected(payload)
 end
 
 function user.save_file(payload)
-  orisa.send_save_package_content(payload.name, payload.content)
+  run_save(payload.name, payload.content)
 end
 
 function user.pong(payload)

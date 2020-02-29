@@ -103,6 +103,7 @@ topic {
       <li><b>/get here name</b> -- shows the name of the room you are in.
       <li><b>/set me description "Suave and sophisticated"</b> -- set a new description for yourself.
       The "value" there is a Lua expression. (See <b>/help code</b> for helpful tips about Lua code in Orisa.)
+      <li><b>/edit me description</b> -- bring up the current value in the code editor for changing.
     </ul>
   ]],
   function(topic)
