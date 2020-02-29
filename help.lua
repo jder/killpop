@@ -31,9 +31,11 @@ topic {
   summary = "Talking and walking around the world.",
   template = etlua.compile [[
     <h1><%= util.title(topic.name) %></h1>
-    <h2>Talking</h2>
+    <h2>Communicating</h2>
     <p>You can talk to others in the same room you're in by 
     starting any command with <b>"</b> or <b>'</b>, for example <b>"Hello!</b></p>
+    <p>You can also "emote", or perform actions by starting any command with : or 
+    /me, for example <b>/me does a silly dance</b></p>
     
     <h2>Looking Around</h2>
     <p>You can get a description of where you are with <b>look</b> or <b>l</b>.
