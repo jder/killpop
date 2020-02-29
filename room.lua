@@ -185,7 +185,7 @@ room.take = util.verb {
       else
         local success = pcall(orisa.move_object, target, payload.user)
         if success then
-          orisa.send(payload.user, "tell", {message = "Taken."})
+          orisa.send(payload.room, "tell_action", {user = payload.user, me = "Taken.", others = string.format("%s takes %s.", util.get_name(payload.user), util.get_name(target))})
         else 
           orisa.send(payload.user, "tell", {message = string.format("Can't take %s.", payload.command.direct_object.text)})
         end
@@ -208,7 +208,7 @@ room.drop = util.verb {
       else
         local success = pcall(orisa.move_object, target, util.current_room(payload.user))
         if success then
-          orisa.send(payload.user, "tell", {message = "Dropped."})
+          orisa.send(payload.room, "tell_action", {user = payload.user, me = "Dropped.", others = string.format("%s drops %s.", util.get_name(payload.user), util.get_name(target))})
         else 
           orisa.send(payload.user, "tell", {message = string.format("Can't drop %s.", payload.command.direct_object.text)})
         end
