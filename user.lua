@@ -51,6 +51,10 @@ local function run_command(text)
   orisa.send(util.current_room(orisa.self), "command", {message = text})
 end
 
+local function run_emote(text)
+  orisa.send(orisa.get_parent(orisa.self), "tell", {message = util.get_name(orisa.self) .. " " .. text})
+end
+
 local function run_say(text)
   orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
 end
@@ -332,6 +336,8 @@ function user.command(payload)
     ["^`(.*)"] = run_eval,
     ["^[\"'](.*)"] = {handler = run_say, echo = false},
     ["^/say *(.*)"] = {handler = run_say, echo = false},
+    ["^:(.*)"] = {handler = run_emote, echo = false},
+    ["^/me *(.*)"] = {handler = run_emote, echo = false},
     ["^/run (.*)"] = run_run,
     ["^/eval (.*)"] = run_eval,
     ["^/examine *(.*)"] = run_examine,
