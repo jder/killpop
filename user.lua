@@ -55,6 +55,26 @@ local function run_emote(text)
   orisa.send(orisa.get_parent(orisa.self), "tell", {message = util.get_name(orisa.self) .. " " .. text})
 end
 
+local function run_tell(recipient_query, text)
+  local recipient
+  if string.sub(recipient_query, 1, 1) == '#' then
+    local _, kind = util.split_kind(orisa.get_kind(recipient_query))
+    if kind == "user" then
+      recipient = recipient_query
+    end
+  else
+    local users = orisa.get_all_users()
+    recipient = users[recipient_query]
+  end
+  if recipient == nil then
+    text_reply(string.format("Can't find a user named %q", recipient_query))
+  end
+  if orisa.self ~= recipient then
+    orisa.send(orisa.self, "tell", {message = string.format("(private:%s) %s: %s", util.get_name(recipient), util.get_name(orisa.self), text)})
+  end
+  orisa.send(recipient, "tell", {message = string.format("(private:%s) %s: %s", util.get_name(orisa.self), util.get_name(orisa.self), text)})
+end
+
 local function run_say(text)
   orisa.send(orisa.get_parent(orisa.self), "say", {message = text})
 end
@@ -338,6 +358,7 @@ function user.command(payload)
     ["^/say *(.*)"] = {handler = run_say, echo = false},
     ["^:(.*)"] = {handler = run_emote, echo = false},
     ["^/me *(.*)"] = {handler = run_emote, echo = false},
+    ["^/tell +(%g+) +(.*)"] = {handler = run_tell, echo = false},
     ["^/run (.*)"] = run_run,
     ["^/eval (.*)"] = run_eval,
     ["^/examine *(.*)"] = run_examine,

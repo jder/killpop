@@ -36,6 +36,8 @@ topic {
     starting any command with <b>"</b> or <b>'</b>, for example <b>"Hello!</b></p>
     <p>You can also "emote", or perform actions by starting any command with : or 
     /me, for example <b>/me does a silly dance</b></p>
+    <p>If you want to send a message to someone who isn't in the room,
+    you can send a private message to them from anywhere with /tell.</p>
     
     <h2>Looking Around</h2>
     <p>You can get a description of where you are with <b>look</b> or <b>l</b>.
