@@ -38,7 +38,7 @@ topic {
     /me, for example <b>/me does a silly dance</b></p>
     <p>If you want to send a message to someone who isn't in the room,
     you can send a private message to them from anywhere with /tell, like <b>/tell
-    YourFriend Hi there this is a private message!.</p>
+    YourFriend Hi there this is a private message!</b></p>
     
     <h2>Looking Around</h2>
     <p>You can get a description of where you are with <b>look</b> or <b>l</b>.
