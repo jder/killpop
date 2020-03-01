@@ -55,6 +55,13 @@ local function run_emote(text)
   orisa.send(orisa.get_parent(orisa.self), "tell", {message = util.get_name(orisa.self) .. " " .. text})
 end
 
+local function run_shout(text)
+  local users = orisa.get_all_users()
+  for _, u in pairs(users) do
+    orisa.send(u, "tell", {message = string.format("[SHOUT] %s: %s", util.get_name(orisa.self), text)})
+  end
+end
+
 local function run_tell(recipient_query, text)
   local recipient
   if string.sub(recipient_query, 1, 1) == '#' then
@@ -359,6 +366,7 @@ function user.command(payload)
     ["^:(.*)"] = {handler = run_emote, echo = false},
     ["^/me *(.*)"] = {handler = run_emote, echo = false},
     ["^/tell +(%g+) +(.*)"] = {handler = run_tell, echo = false},
+    ["^/shout +(.*)$"] = {handler = run_shout, echo = false},
     ["^/run (.*)"] = run_run,
     ["^/eval (.*)"] = run_eval,
     ["^/examine *(.*)"] = run_examine,

@@ -57,6 +57,7 @@ topic {
       <li><b>take (something)</b> to pick something up.
       <li><b>inventory</b> or <b>i</b> to see what you're holding.
       <li><b>drop (something)</b> to drop something you're holding in the room you're in.
+      <li><b>/shout (something)</b> to shout so everyone on the server can hear you.
     </ul>
   ]],
   function(topic)
