@@ -337,6 +337,8 @@ topic {
       <li><b>name</b> -- displayed as the name of an object in look/examine descriptions. Also can be used to refer to this object in commands.
       <li><b>aliases</b> -- a list of additional strings that can be used to refer to this object in commands.
       <li><b>description</b> -- shown in response to <b>examine</b>
+      <li><b>room_description</b> -- instead of being shown in the standard object list, describe this object in the room's primary description with this sentence.
+      <li><b>room_qualifier</b> -- shown in room description after the name of the object, in parens.
       <li><b>owner</b> -- set by <b>system.object</b> at creation time to a privileged object who can set attributes with the <b>set</b> message.
       <li><b>hidden</b> -- boolean attribute; if true, this object is not mentioned in <b>look</b>.
       <li><b>log_$name</b> -- boolean set on users to turn on/off log messages for the logger with name <b>$name</b>. 

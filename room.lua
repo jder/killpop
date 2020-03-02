@@ -103,22 +103,37 @@ room.look = util.verb {
     local contents = {}
     local user_contents = {}
     local exits = {}
+    local description_bits = {orisa.get_attr(orisa.self, "description") or "This space is unremarkable."}
+
+    function render_in_list(object)
+      local name = util.get_name(object)
+      local qual = orisa.get_attr(object, "room_qualifier")
+      if qual then
+        return string.format("%s (%s)", name, qual)
+      else
+        return name
+      end
+    end
+
     for _, child in ipairs(children) do
       local _, kind = util.split_kind(orisa.get_kind(child))
 
       if not orisa.get_attr(child, "hidden") then
-        if kind == 'user' then
-          table.insert(user_contents, util.get_name(child))
+        local desc = orisa.get_attr(child, "room_description")
+        if desc then 
+          table.insert(description_bits, desc)
+        elseif kind == 'user' then
+          table.insert(user_contents, render_in_list(child))
         elseif kind == 'door' then
-          table.insert(exits, util.get_name(child))
+          table.insert(exits, render_in_list(child))
         else
-          table.insert(contents, util.get_name(child))
+          table.insert(contents, render_in_list(child))
         end
       end
     end
     orisa.send(payload.user, "tell_html", {html = room.look_template({
       room_name = util.get_name(orisa.self),
-      room_description = orisa.get_attr(orisa.self, "description"),
+      room_description = table.concat(description_bits, " "),
       children_description = util.oxford_join(contents, ", ", ", and "),
       users_description = util.oxford_join(user_contents, ", ", ", and "),
       exits_description = util.oxford_join(exits, ", ", ", and ")
@@ -128,7 +143,7 @@ room.look = util.verb {
 
 room.look_template = etlua.compile [[
 <p><b><%= room_name %></b></p>
-<p><%= room_description or "It's unremarkable" %></p>
+<p><%= room_description %></p>
 <% if string.len(exits_description) > 0 then %>
   <p><strong>Exits:</strong> <%= exits_description %></p>
 <% else %>
