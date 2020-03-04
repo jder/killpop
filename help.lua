@@ -100,6 +100,7 @@ topic {
     <ul>
         <li><b>/move me #0</b> -- return to the entryway
         <li><b>/banish apple</b> -- sends the apple "away" (sets its parent to nil)
+        <li><b>/join jder</b> -- moves you to the same room as the user "jder"
     </ul>
     <h2>Attributes</h2>
     <p>All objects have attributes which you can read, like <b>name</b> and <b>description</b>
