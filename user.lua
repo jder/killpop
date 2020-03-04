@@ -428,12 +428,12 @@ function user.connected(payload)
   if history then
     orisa.send_user_backlog_html(history)
   end
-  text_reply("Welcome! Run /help to see available help.")
-  orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s wakes up.", orisa.get_username(orisa.self))})
+  -- intentionally skip history here
+  orisa.send_user_tell_html("Welcome! Run /help to see available help.")
 end
 
 function user.disconnected(payload)
-  orisa.send(orisa.get_parent(orisa.self), "tell_others", {message = string.format("%s goes to sleep.", orisa.get_username(orisa.self))})
+  -- nothing to do here
 end
 
 function user.save_file(payload)
