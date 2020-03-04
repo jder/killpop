@@ -357,6 +357,22 @@ local function parse_user_command(text, patterns)
   end
 end
 
+function run_join(username)
+  for name, user in pairs(orisa.get_all_users()) do
+    if name == username then
+      orisa.send(util.current_room(orisa.self), "tell_action", {
+        user = orisa.self, me = "You sniff the air, then vanish.", others = string.format("%s sniffs the air, then vanishes in a puff of smoke.", util.get_name(orisa.self))
+      })
+      orisa.move_object(orisa.self, orisa.get_parent(user))
+      orisa.send(util.current_room(orisa.self), "tell_action", {
+        user = orisa.self, me = string.format("You arrive next to %s.", name), others = string.format("%s appears in a puff of smoke next to %s.", util.get_name(orisa.self), name)
+      })
+      return
+    end
+  end
+  text_reply(string.format("You try hard but can't sense anyone named %q.", username))
+end
+
 function user.command(payload)
   assert(orisa.sender == orisa.self, "refusing to run command from someone other than ourselves") -- only run commands from the user
   local patterns = {
@@ -387,6 +403,7 @@ function user.command(payload)
     ["^/help *$"] = run_help_top,
     ["^/help +([a-z%.]+) *$"] = run_help,
     ["^/help +([a-z%.]+) +(.+)"] = run_help,
+    ["^/join +(%g+)$"] = run_join,
     ["^([^/`'\"].*)"] = run_command,
     default = run_fallback
   }
