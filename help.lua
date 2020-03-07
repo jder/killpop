@@ -202,6 +202,17 @@ topic {
     helpful utilities for common tasks, including helpers for defining new types, finding objects based
     on text descriptions, querying containment, and string manipulation. We'll probably break this up at some point.</p>
     <p>Unlike other system packages you must <b>require</b>, this is globally available as <b>util</b>.</p>
+    <h2>Time & Delays</h2>
+    <p>You can get and manipulate system time & date with the lua-standard <b>os.date</b>, <b>os.time</b> and <b>os.difftime</b>.</p>
+    <p>You can execute some code after a delay with <b>orisa.set_delay(name, delay, message, payload)</b>, the meaning of which is:
+    <ul>
+      <li><b>name</b>: if present, any other delay with the same name for this object is cancelled. May be nil, which will generate a unique name.
+      <li><b>delay</b>: an integer number of seconds to delay
+      <li><b>message</b>: the name of the message to send to this object after at least <b>delay</b> seconds
+      <li><b>payload</b>: nil, or a payload to include when the message is sent
+    </ul>
+    The return value is the name passed in (or generated).</p>
+    <p>You can also cancel a previously-set timer with <b>orisa.cancel_delay(name)</b> which cancels the call with the given name, if any.</p>
     <h2>Logging</h2>
     <p>The system.util package also includes a simple logging system. Calling <b>util.logger("foo")</b> returns a
     function which acts like <b>print(string.format(...))</b>, except it displays tables more nicely via util.tostring.
