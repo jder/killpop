@@ -160,7 +160,7 @@ function util.to_words(query)
   local result = {}
   for word in string.gmatch(query, "%S+") do
     if not util.stopwords[word] then
-      table.insert(result, word.lower())
+      table.insert(result, string.lower(word))
     end
   end
 
