@@ -155,9 +155,6 @@ end
 
 --- Does the text given describe this object? (Assuming both are lowercase & space-separated.)
 function util.object_matches(object, text)
-  local strip_articles = string.match(text, "the|a (.+))")
-  if strip_articles then text = strip_articles end
-
   if util.get_name(object) == text then
     return true
   end
