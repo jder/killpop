@@ -153,8 +153,24 @@ function util.find_all(query, from)
   return results
 end
 
+util.stopwords = {"the", "a", "an", "some", "any"}
+
+-- Convert some text to lowercase space-separated words, removing stopwords
+function util.to_words(query)
+  local result = {}
+  for word in string.gmatch(query, "%S+") do
+    if not util.stopwords[word] then
+      table.insert(result, word.lower())
+    end
+  end
+
+  return table.concat(result, " ")
+end
+
 --- Does the text given describe this object? (Assuming both are lowercase & space-separated.)
 function util.object_matches(object, text)
+  local text = util.to_words(text)
+
   if util.get_name(object) == text then
     return true
   end
