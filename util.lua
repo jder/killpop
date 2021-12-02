@@ -153,7 +153,7 @@ function util.find_all(query, from)
   return results
 end
 
-util.stopwords = {"the" = true, "a" = true, "an" = true, "some" = true, "any" = true}
+util.stopwords = {the = true, a = true, an = true, some = true, any = true}
 
 -- Convert some text to lowercase space-separated words, removing stopwords
 function util.to_words(query)
