@@ -75,7 +75,7 @@ end
 -- e.g. util.split_kind("system.object") == "system", "object".
 -- Returns nil if it does not match the expected pattern.
 function util.split_kind(kind)
-  return string.match(kind, "^([a-zA-Z0-9_/]+)%.([a-zA-Z0-9_]+)$")
+  return string.match(kind, "^([-a-zA-Z0-9_/]+)%.([-a-zA-Z0-9_]+)$")
 end
 
 --- A quick description of this object
