@@ -147,6 +147,15 @@ local function run_examine(query)
     contents = contents .. util.get_name(child) .. " (" .. child .. ")"
   end
   text_reply(contents)
+
+  local attributes = orisa.list_attrs(target)
+  table.sort(attributes)
+  local attributes_desc = "Attributes: "
+  for i, attr in ipairs(attributes) do
+    attributes_desc = attributes_desc .. "\n  " .. attr .. " = " .. util.tostring(orisa.get_attr(target, attr))
+  end
+  text_reply(attributes_desc)
+
 end
 
 local function expand_kind(kind)

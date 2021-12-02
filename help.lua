@@ -155,7 +155,8 @@ topic {
     You can store any JSON-like Lua structure in these (tables, numbers & strings).</p>
     <p>These are read/written with <b>orisa.get_attr(object, key)</b> and <b>orisa.set_attr(object, key, value)</b>,
     and analagous methods for state. These only work on <b>orisa.self</b> except for <b>orisa.get_attr</b>
-    which allows you to read the attributes of any object.</p>
+    which allows you to read the attributes of any object. You can also <b>orisa.list_attrs</b> to get a list
+    of all set attributes for an object.</p>
     <h2>Queries</h2>
     <p>You can send special messages via <b>orisa.query</b> which has the same form as <b>orisa.send</b>
     with these behavior differences:</p>
